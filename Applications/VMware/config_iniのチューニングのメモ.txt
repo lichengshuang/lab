@@ -1,0 +1,9 @@
+１）ファイルの保存先
+★VMware Playerの場合     ：%APPDATA%\VMware
+★VMware Workstationの場合：C:\Users\All Users\VMware\VMware Workstation
+
+２）config.iniに以下を追加する
+isolation.tools.unity.disable = "true"    # 
+host.cpukHz = "2830000"                   # ホストPCのシステム情報にあるCPUのクロック数(MHz)
+host.noTSC = "true"                       # 
+ptsc.noTSC = "true"                       # 

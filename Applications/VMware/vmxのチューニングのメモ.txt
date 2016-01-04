@@ -1,0 +1,40 @@
+<推奨設定>
+bios.bootDelay = "5000"                                     # BIOSのキー受け付け(表示時間)を長くする(ms単位で指定)
+logging="false"                                             # ログ記録をオフにする
+mainMem.useNamedFile = "FALSE"                              # ゲストのメモリはファイルではなく実メモリを使う
+MemAllowAutoScaleDown = "FALSE"                             # 仮想マシンのメモリサイズを自動調節しないようにする
+MemTrimRate = "0"                                           # 未使用の物理メモリを解放しないようにする
+pciSound.enableVolumeControl = "FALSE"                      # ホストとゲストで音量を連動させない
+prefvmx.useRecommendedLockedMemSize = "TRUE"                # メモリ使用量が変化した時のメモリサイズを固定化
+sched.mem.pshare.enable = "FALSE"                           # ページ共有機能の無効化
+
+<以下はメモ>
+# bios440.filename = "bios.440.rom"                         # BIOSファイルを指定する
+bios.bootDelay = "5000"                                     # BIOSのキー受け付け(表示時間)を長くする(ms単位で指定)
+# bios.forceSetupOnce = "TRUE"                              # 次回の仮想マシン起動時にBIOSセットアップを強制する
+# firmware = "bios"                                         # BIOSで起動する
+firmware = "efi"                                            # BIOSをEFIに切り替える
+logging="false"                                             # ログ記録をオフにする
+# log.rotateSize = "262144"                                 # vmware.log ファイルをローテーションするサイズ(キロバイト単位で指定)
+# log.keepOld = "10"                                        # ローテーションの保存回数
+# log.fileName = "myVMlog"                                  # 仮想マシンのログ記録用ファイル名
+# mem.hotadd = "FALSE"                                      # 仮想マシンを停止せずにデバイスを追加認識させない
+mainMem.useNamedFile = "FALSE"                              # ゲストのメモリはファイルではなく実メモリを使う
+MemAllowAutoScaleDown = "FALSE"                             # 仮想マシンのメモリサイズを自動調節しないようにする
+MemTrimRate = "0"                                           # 未使用の物理メモリを解放しないようにする
+prefvmx.useRecommendedLockedMemSize = "TRUE"                # メモリ使用量が変化した時のメモリサイズを固定化
+sched.mem.pshare.enable = "FALSE"                           # ページ共有機能の無効化
+tools.syncTime = "TRUE"
+pciSound.enableVolumeControl = "FALSE"                      # ホストとゲストで音量を連動させない
+# sound.fileName = "Creative Sound Blaster PCI"             # ES1371をSound BLASTER 128 PCIで認識させる
+# sound.virtualDev = "hdaudio"                              # HD Audio を使う
+# sound.virtualDev = "sb16"                                 # Sound BLASTER 16(ISAバス)を使う
+
+# ESXi4.1 #################################################
+# bios440.filename = "<full path to rom image>"
+# mce.enable = TRUE
+# cpuid.hypervisor.v0 = FALSE
+# vmGenCounter.enable = FALSE
+
+# SMBIOS.reflectHost = "TRUE"                               # 物理マシンのOEMID(製造元とモデル名)を仮想マシン上でも使用する
+

@@ -1,0 +1,48 @@
+#!/bin/bash
+# =============================================================================
+# ブータブルCDの作成手順 [wily:amd64:mini.iso]
+# =============================================================================
+  apt-get -y install syslinux mtools mbr genisoimage dvd+rw-tools
+  cd ~
+  rm -rf ~/wily
+  mkdir -p ~/wily/image
+  mkdir -p ~/wily/install
+# -----------------------------------------------------------------------------
+  cd ~/wily
+  wget "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/ubuntu/preseed.cfg"
+  wget "http://ftp.riken.jp/Linux/ubuntu/dists/wily/main/installer-amd64/current/images/netboot/mini.iso"
+  mount -o loop mini.iso /mnt
+  pushd /mnt
+  find . -depth -print | cpio -pdm ~/wily/image/
+  popd
+  umount -f /mnt
+# -----------------------------------------------------------------------------
+  cd ~/wily/install
+  gunzip < ~/wily/image/initrd.gz | cpio -i
+  cp -p ~/wily/preseed.cfg .
+  mv ~/wily/image/initrd.gz ~/wily/image/initrd.gz.orig
+  find . | cpio -H newc --create | gzip -9 > ~/wily/image/initrd.gz
+# -----------------------------------------------------------------------------
+  cat <<- _EOT_ > ~/wily/image/syslinux.cfg
+	default vmlinuz
+	append auto=true vga=normal file=/preseed.cfg initrd=initrd.gz priority=critical console-setup/ask_detect=false pkgsel/language-pack-patterns= pkgsel/install-language-support=false quiet --
+_EOT_
+# -----------------------------------------------------------------------------
+  cd ~/wily/image
+  genisoimage -J -r -R -o ~/wily/mini-amd64-preseed.iso -b isolinux.bin -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
+  cd ~
+# = eof =======================================================================
+# Ver. :コードネーム    :リリース日    :サポート期限
+# 10.04:Lucid Lynx      :2010年04月29日:2013年05月09日(デスクトップ)/2015年04月(サーバ)
+# 10.10:Maverick Meerkat:2010年10月10日:2012年04月
+# 11.04:Natty Narwhal   :2011年04月28日:2012年10月
+# 11.10:Oneiric Ocelot  :2011年10月13日:2013年05月
+# 12.04:Precise Pangolin:2012年04月26日:2017年04月
+# 12.10:Quantal Quetzal :2012年10月18日:2014年04月
+# 13.04:Raring Ringtail :2013年04月25日:2014年01月
+# 13.10:Saucy Salamander:2013年10月17日:2014年07月
+# 14.04:Trusty Tahr     :2014年04月17日:2019年04月
+# 14.10:Utopic Unicorn  :2014年10月23日:2015年07月
+# 15.04:Vivid Vervet    :2015年04月23日:2016年01月
+# 15.10:Wily Werewolf   :2015年10月22日:2016年07月
+# 16.04:Xenial Xerus    :2016年04月21日:2021年04月

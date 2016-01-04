@@ -1,0 +1,20 @@
+※VMware Workstation 10.0.5とdebian7.8で確認
+# =============================================================================
+cd /usr/lib/vmware-tools/modules/source/
+tar xf vmhgfs.tar
+cd vmhgfs-only
+# -----------------------------------------------------------------------------
+chmod 644 inode.c
+vi inode.c
+chmod 444 inode.c
+# -----------------------------------------------------------------------------
+cd ..
+mv vmhgfs.tar vmhgfs.tar.orig
+tar cf vmhgfs.tar vmhgfs-only
+# -----------------------------------------------------------------------------
+diff inode.c.orig inode.c
+1973c1973
+<          struct dentry *dentry = list_entry(pos, struct dentry, d_alias);
+---
+>          struct dentry *dentry = list_entry(pos, struct dentry, d_u.d_alias);
+# =============================================================================

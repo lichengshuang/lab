@@ -1,0 +1,46 @@
+#!/bin/bash
+# =============================================================================
+# ブータブルCDの作成手順 [current-builds:debian-8.2.0-amd64-i386-netinst.iso]
+# =============================================================================
+  apt-get -y install syslinux mtools mbr genisoimage dvd+rw-tools
+  cd ~
+  rm -rf ~/current
+  mkdir -p ~/current/image
+  mkdir -p ~/current/install.386
+  mkdir -p ~/current/install.amd
+# -----------------------------------------------------------------------------
+  cd ~/current
+  wget "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg"
+  wget "http://cdimage.debian.org/cdimage/release/current/multi-arch/iso-cd/debian-8.2.0-amd64-i386-netinst.iso"
+  mount -o loop debian-8.2.0-amd64-i386-netinst.iso /mnt
+  pushd /mnt
+  find . -depth -print | cpio -pdm ~/current/image/
+  popd
+  umount -f /mnt
+# -- 386 ----------------------------------------------------------------------
+  cd ~/current/install.386
+  gunzip < ~/current/image/install.386/initrd.gz | cpio -i
+  cp -p ~/current/preseed.cfg .
+  mv ~/current/image/install.386/initrd.gz ~/current/image/install.386/initrd.gz.orig
+  find . | cpio -H newc --create | gzip -9 > ~/current/image/install.386/initrd.gz
+# -----------------------------------------------------------------------------
+  cat <<- _EOT_ > ~/current/image/install.386/syslinux.cfg
+	default vmlinuz
+	append auto=true vga=normal file=/preseed.cfg initrd=initrd.gz priority=critical console-setup/ask_detect=false pkgsel/language-pack-patterns= pkgsel/install-language-support=false quiet --
+_EOT_
+# -- amd ----------------------------------------------------------------------
+  cd ~/current/install.amd
+  gunzip < ~/current/image/install.amd/initrd.gz | cpio -i
+  cp -p ~/current/preseed.cfg .
+  mv ~/current/image/install.amd/initrd.gz ~/current/image/install.amd/initrd.gz.orig
+  find . | cpio -H newc --create | gzip -9 > ~/current/image/install.amd/initrd.gz
+# -----------------------------------------------------------------------------
+  cat <<- _EOT_ > ~/current/image/install.amd/syslinux.cfg
+	default vmlinuz
+	append auto=true vga=normal file=/preseed.cfg initrd=initrd.gz priority=critical console-setup/ask_detect=false pkgsel/language-pack-patterns= pkgsel/install-language-support=false quiet --
+_EOT_
+# -----------------------------------------------------------------------------
+  cd ~/current/image
+  genisoimage -J -r -R -o ~/current/debian-8.2.0-amd64-i386-netinst-preseed.iso -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
+  cd ~
+# = eof =======================================================================
