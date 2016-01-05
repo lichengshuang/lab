@@ -123,6 +123,7 @@ funcPause() {
 			utopic       ) SET_DIST="${TARGET}"; break ;;	# ubuntu 14.10
 			vivid        ) SET_DIST="${TARGET}"; break ;;	# ubuntu 15.04
 			wily         ) SET_DIST="${TARGET}"; break ;;	# ubuntu 15.10
+			xenial       ) SET_DIST="${TARGET}"; break ;;	# ubuntu 16.04
 		esac;
 	done < /etc/apt/sources.list
 
@@ -339,7 +340,7 @@ _EOT_
 					#	broadcast ${SVR_IPAD}.255
 					#	gateway ${SVR_IPAD}.${GWR_ADDR}
 					#	# dns-* options are implemented by the resolvconf package, if installed
-					#	dns-nameservers ${SVR_IPAD}.${SVR_ADDR} ${SVR_IPAD}.${GWR_ADDR} 8.8.8.8 8.8.4.4
+					#	dns-nameservers ${SVR_IPAD}.${SVR_ADDR} ${SVR_IPAD}.${GWR_ADDR} 8.8.8.8 8.8.4.4 208.67.222.123 208.67.220.123
 					#	dns-search ${WGP_NAME}
 					#---------------------------------------------------------------------------
 _EOT_
@@ -366,6 +367,8 @@ _EOT_
 				nameserver ${SVR_IPAD}.${GWR_ADDR}
 				nameserver 8.8.8.8
 				nameserver 8.8.4.4
+				nameserver 208.67.222.123
+				nameserver 208.67.220.123
 _EOT_
 		else
 			cat <<- _EOT_ > /etc/resolv.conf
@@ -1038,10 +1041,14 @@ _EOT_
 		 				IN	NS	${GWR_NAME}
 		 				IN	NS	google-public-dns-a.google.com
 		 				IN	NS	google-public-dns-b.google.com
+		 				IN	NS	resolver1-fs.opendns.com
+		 				IN	NS	resolver2-fs.opendns.com
 		${SVR_NAME}			IN	A	${SVR_IPAD}.${SVR_ADDR}
 		${GWR_NAME}			IN	A	${SVR_IPAD}.${GWR_ADDR}
 		google-public-dns-a.google.com	IN	A	8.8.8.8
 		google-public-dns-b.google.com	IN	A	8.8.4.4
+		resolver1-fs.opendns.com		IN	A	208.67.222.123
+		resolver2-fs.opendns.com		IN	A	208.67.220.123
 _EOT_
 	if [ ${FLG_VIEW} -ne 0 ]; then
 		vi -c "set list" -c "set listchars=tab:>_" /var/cache/bind/${WGP_NAME}.zone
@@ -1060,10 +1067,14 @@ _EOT_
 		 				IN	NS	${GWR_NAME}.${WGP_NAME}.
 		 				IN	NS	google-public-dns-a.google.com
 		 				IN	NS	google-public-dns-b.google.com
+		 				IN	NS	resolver1-fs.opendns.com
+		 				IN	NS	resolver2-fs.opendns.com
 		${SVR_ADDR}			IN	PTR	${SVR_NAME}.${WGP_NAME}.
 		${GWR_ADDR}			IN	PTR	${GWR_NAME}.${WGP_NAME}.
 		8.8.8.8				IN	PTR	google-public-dns-a.google.com
 		8.8.4.4				IN	PTR	google-public-dns-b.google.com
+		208.67.222.123		IN	PTR	resolver1-fs.opendns.com
+		208.67.220.123		IN	PTR	resolver2-fs.opendns.com
 _EOT_
 	if [ ${FLG_VIEW} -ne 0 ]; then
 		vi -c "set list" -c "set listchars=tab:>_" /var/cache/bind/${WGP_NAME}.rev
@@ -1106,7 +1117,7 @@ _EOT_
 	cat <<- _EOT_ > /etc/dhcp/dhcpd.conf
 		subnet ${SVR_IPAD}.0 netmask 255.255.255.0 {
 		 	option time-servers ntp.nict.jp;
-		 	option domain-name-servers ${SVR_IPAD}.${SVR_ADDR}, ${SVR_IPAD}.${GWR_ADDR}, 8.8.8.8, 8.8.4.4;
+		 	option domain-name-servers ${SVR_IPAD}.${SVR_ADDR}, ${SVR_IPAD}.${GWR_ADDR}, 8.8.8.8, 8.8.4.4, 208.67.222.123, 208.67.220.123;
 		 	option domain-name "${WGP_NAME}";
 		 	range ${ADR_DHCP};
 		 	option routers ${SVR_IPAD}.${GWR_ADDR};
