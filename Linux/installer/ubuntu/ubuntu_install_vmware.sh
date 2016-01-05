@@ -196,26 +196,17 @@ funcPause() {
 
 		cat <<- _EOT_ >> /etc/apt/sources.list
 			#-------------------------------------------------------------------------------
-			deb     http://security.debian.org/      ${SET_DIST}/updates                   main contrib non-free
-			deb-src http://security.debian.org/      ${SET_DIST}/updates                   main contrib non-free
+			deb     http://security.ubuntu.com/ubuntu    ${SET_DIST}-security  main restricted universe multiverse
+			deb-src http://security.ubuntu.com/ubuntu    ${SET_DIST}-security  main restricted universe multiverse
 
-			deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}                           main contrib non-free
-			deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}                           main contrib non-free
+			deb     http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}           main restricted universe multiverse
+			deb-src http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}           main restricted universe multiverse
 
-			deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-updates                   main contrib non-free
-			deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-updates                   main contrib non-free
+			deb     http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}-updates   main restricted universe multiverse
+			deb-src http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}-updates   main restricted universe multiverse
 
-			# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-proposed-updates          main contrib non-free
-			# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-proposed-updates          main contrib non-free
-
-			# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-backports                 main contrib non-free
-			# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-backports                 main contrib non-free
-
-			# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd                  main contrib non-free
-			# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd                  main contrib non-free
-
-			# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd-proposed-updates main contrib non-free
-			# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd-proposed-updates main contrib non-free
+			deb     http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}-backports main restricted universe multiverse
+			deb-src http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}-backports main restricted universe multiverse
 			#-------------------------------------------------------------------------------
 _EOT_
 	fi
