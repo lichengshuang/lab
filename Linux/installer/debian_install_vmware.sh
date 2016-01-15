@@ -47,6 +47,8 @@
 ##	2015/11/18 000.0000 J.Itou         処理見直し(freshclam.conf見直し)
 ##	2015/12/26 000.0000 J.Itou         処理見直し(locale-gen見直し)
 ##	2016/01/03 000.0000 J.Itou         処理見直し(freshclam.conf,crontabs見直し)
+##	2016/01/05 000.0000 J.Itou         処理見直し(DNSにOPEN DNSを追加)
+##	2016/01/13 000.0000 J.Itou         処理見直し(clamav-freshclam見直し)
 ##	YYYY/MM/DD 000.0000 xxxxxxxxxxxxxx 
 ################################################################################
 #set -nvx
@@ -749,7 +751,11 @@ _EOT_
 #	fi
 #
 #	freshclam -d
-	service clamav-freshclam stop
+#	service clamav-freshclam stop
+
+	/etc/init.d/clamav-freshclam stop
+	update-rc.d clamav-freshclam disable
+	service --status-all | grep clamav-freshclam
 
 #-------------------------------------------------------------------------------
 # Install ntpdate
