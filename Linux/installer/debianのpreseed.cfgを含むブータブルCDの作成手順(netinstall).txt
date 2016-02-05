@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# ブータブルCDの作成手順 [current-builds:debian-8.2.0-amd64-i386-netinst.iso]
+# ブータブルCDの作成手順 [current-builds:debian-8.3.0-amd64-i386-netinst.iso]
 # =============================================================================
   apt-get -y install syslinux mtools mbr genisoimage dvd+rw-tools
   cd ~
@@ -11,8 +11,8 @@
 # -----------------------------------------------------------------------------
   cd ~/current
   wget "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg"
-  wget "http://cdimage.debian.org/cdimage/release/current/multi-arch/iso-cd/debian-8.2.0-amd64-i386-netinst.iso"
-  mount -o loop debian-8.2.0-amd64-i386-netinst.iso /mnt
+  wget "http://cdimage.debian.org/cdimage/release/current/multi-arch/iso-cd/debian-8.3.0-amd64-i386-netinst.iso"
+  mount -o loop debian-8.3.0-amd64-i386-netinst.iso /mnt
   pushd /mnt
   find . -depth -print | cpio -pdm ~/current/image/
   popd
@@ -41,6 +41,6 @@ _EOT_
 _EOT_
 # -----------------------------------------------------------------------------
   cd ~/current/image
-  genisoimage -J -r -R -o ~/current/debian-8.2.0-amd64-i386-netinst-preseed.iso -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
+  genisoimage -J -r -R -o ~/current/debian-8.3.0-amd64-i386-netinst-preseed.iso -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
   cd ~
 # = eof =======================================================================
