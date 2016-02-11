@@ -17,6 +17,8 @@
 ##	   日付       版         名前      改訂内容
 ##	---------- -------- -------------- -----------------------------------------
 ##	2015/02/20 000.0000 J.Itou         新規作成
+##	2016/02/10 000.0000 J.Itou         処理見直し(samba見直し)
+##	2016/02/11 000.0000 J.Itou         処理見直し(ユーザー登録ファイル見直し)
 ##	YYYY/MM/DD 000.0000 xxxxxxxxxxxxxx 
 ##	---------- -------- -------------- -----------------------------------------
 ################################################################################
@@ -48,27 +50,49 @@ funcPause() {
 
 	DIR_WK=/work
 
+	LST_USER=${DIR_WK}/addusers.txt
 	USR_FILE=${DIR_WK}/${PGM_NAME}.sh.usr.list
 	SMB_FILE=${DIR_WK}/${PGM_NAME}.sh.smb.list
-
-	WWW_DATA=www-data
+	SMB_USER=sambauser
+	SMB_GRUP=sambashare
 
 	# ワーク・ディレクトリーの変更 --------------------------------------------
 	pushd ${DIR_WK}
 
-#-------------------------------------------------------------------------------
-# Make User List File
-#-------------------------------------------------------------------------------
-	cat <<- _EOT_ > ${USR_FILE}
-		Administrator:Administrator:1001:
+#------------------------------------------------------------------------------
+# Make User file
+#------------------------------------------------------------------------------
+	rm -f ${USR_FILE}
+	rm -f ${SMB_FILE}
+	touch ${USR_FILE}
+	touch ${SMB_FILE}
+
+	if [ ! -f ${LST_USER} ]; then
+		# Make User List File --------------------------------------------------
+		cat <<- _EOT_ > ${USR_FILE}
+			Administrator:Administrator:1001:
 _EOT_
 
-#-------------------------------------------------------------------------------
-# Make Samba User List File (pdbedit -L -w にて出力されたもの)
-#-------------------------------------------------------------------------------
-	cat <<- _EOT_ > ${SMB_FILE}
-		administrator:1001:E52CAC67419A9A224A3B108F3FA6CB6D:8846F7EAEE8FB117AD06BDD830B7586C:[U          ]:LCT-5451C9F9:
+		# Make Samba User List File (pdbedit -L -w にて出力されたもの) ---------
+		cat <<- _EOT_ > ${SMB_FILE}
+			administrator:1001:E52CAC67419A9A224A3B108F3FA6CB6D:8846F7EAEE8FB117AD06BDD830B7586C:[U          ]:LCT-56BC0BA1:
 _EOT_
+	else
+		while read LINE
+		do
+			USERNAME=`echo ${LINE} | awk -F : '{print $1;}' | tr '[A-Z]' '[a-z]'`
+			FULLNAME=`echo ${LINE} | awk -F : '{print $2;}'`
+			USERIDNO=`echo ${LINE} | awk -F : '{print $3;}'`
+			PASSWORD=`echo ${LINE} | awk -F : '{print $4;}'`
+			LMPASSWD=`echo ${LINE} | awk -F : '{print $5;}'`
+			NTPASSWD=`echo ${LINE} | awk -F : '{print $6;}'`
+			ACNTFLAG=`echo ${LINE} | awk -F : '{print $7;}'`
+			CHNGTIME=`echo ${LINE} | awk -F : '{print $8;}'`
+
+			echo "${USERNAME}:${FULLNAME}:${USERIDNO}:${PASSWORD}"                          >> ${USR_FILE}
+			echo "${USERNAME}:${USERIDNO}:${LMPASSWD}:${NTPASSWD}:${ACNTFLAG}:${CHNGTIME}:" >> ${SMB_FILE}
+		done < ${LST_USER}
+	fi
 
 #------------------------------------------------------------------------------
 # Setup Login User
@@ -87,7 +111,7 @@ _EOT_
 			rm -Rf /share/data/usr/${USERNAME}
 		fi
 		# Add users -----------------------------------------------------------
-		useradd -m -c "${FULLNAME}" -G ${WWW_DATA} -u ${USERIDNO} ${USERNAME}
+		useradd -m -c "${FULLNAME}" -G ${SMB_GRUP} -u ${USERIDNO} ${USERNAME}
 		# Make user dir -------------------------------------------------------
 		mkdir -p /share/data/usr/${USERNAME}
 		mkdir -p /share/data/usr/${USERNAME}/app
@@ -96,8 +120,8 @@ _EOT_
 		mkdir -p /share/data/usr/${USERNAME}/web/public_html
 		touch -f /share/data/usr/${USERNAME}/web/public_html/index.html
 		# Change user dir mode ------------------------------------------------
-		chmod -R 1770 /share/data/usr/${USERNAME}
-		chown -R ${WWW_DATA}:${WWW_DATA} /share/data/usr/${USERNAME}
+		chmod -R 770 /share/data/usr/${USERNAME}
+		chown -R ${SMB_USER}:${SMB_GRUP} /share/data/usr/${USERNAME}
 	done < ${USR_FILE}
 
 #-------------------------------------------------------------------------------

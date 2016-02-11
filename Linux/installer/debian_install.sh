@@ -49,6 +49,8 @@
 ##	2016/01/03 000.0000 J.Itou         処理見直し(freshclam.conf,crontabs見直し)
 ##	2016/01/05 000.0000 J.Itou         処理見直し(DNSにOPEN DNSを追加)
 ##	2016/01/13 000.0000 J.Itou         処理見直し(clamav-freshclam見直し)
+##	2016/02/10 000.0000 J.Itou         処理見直し(samba見直し)
+##	2016/02/11 000.0000 J.Itou         処理見直し(ユーザー登録ファイル見直し)
 ##	YYYY/MM/DD 000.0000 xxxxxxxxxxxxxx 
 ################################################################################
 #set -nvx
@@ -85,7 +87,7 @@ funcPause() {
 	SVR_NAME=sv-server							# 本機の名前
 	GWR_ADDR=254								# ゲートウェイのIPアドレス
 	GWR_NAME=gw-router							# ゲートウェイの名前
-	WGP_NAME=workstation						# 本機の属するワークグループ名
+	WGP_NAME=workgroup							# 本機の属するワークグループ名
 	NUM_HDDS=1									# インストール先のHDD台数
 	FLG_DHCP=0									# DHCP自動起動フラグ(0以外で自動起動)
 	ADR_DHCP="${SVR_IPAD}.64 ${SVR_IPAD}.79"	# DHCPの提供アドレス範囲
@@ -146,6 +148,7 @@ funcPause() {
 	MNT_CD=/media/cdrom0
 
 	DIR_WK=/work
+	LST_USER=${DIR_WK}/addusers.txt
 	LOG_FILE=${DIR_WK}/${PGM_NAME}.sh.${NOW_TIME}.log
 	TGZ_WORK=${DIR_WK}/${PGM_NAME}.sh.tgz
 	CRN_FILE=${DIR_WK}/${PGM_NAME}.sh.crn
@@ -154,6 +157,8 @@ funcPause() {
 	SMB_WORK=${DIR_WK}/${PGM_NAME}.sh.smb.work
 	SMB_CONF=/etc/samba/smb.conf
 	SMB_BACK=${SMB_CONF}.orig
+	SMB_USER=sambauser
+	SMB_GRUP=sambashare
 
 	DEV_NUM1=sda
 	DEV_NUM2=sdb
@@ -203,8 +208,6 @@ funcPause() {
 	DEV_RATE="${DEV_USB1} ${DEV_USB2} ${DEV_USB3} ${DEV_USB4}"
 	DEV_TEMP="${DEV_HDD1} ${DEV_HDD2} ${DEV_HDD3} ${DEV_HDD4} ${DEV_RATE}"
 
-	WWW_DATA=www-data
-
 	CMD_AGET="apt-get -y -q"
 #	CMD_AGET="aptitude -y"
 
@@ -252,19 +255,40 @@ _EOT_
 	${CMD_AGET} upgrade
 	${CMD_AGET} dist-upgrade
 
-#-------------------------------------------------------------------------------
-# Make User List File
-#-------------------------------------------------------------------------------
-	cat <<- _EOT_ > ${USR_FILE}
-		Administrator:Administrator:1001:
+#------------------------------------------------------------------------------
+# Make User file
+#------------------------------------------------------------------------------
+	rm -f ${USR_FILE}
+	rm -f ${SMB_FILE}
+	touch ${USR_FILE}
+	touch ${SMB_FILE}
+
+	if [ ! -f ${LST_USER} ]; then
+		# Make User List File --------------------------------------------------
+		cat <<- _EOT_ > ${USR_FILE}
+			Administrator:Administrator:1001:
 _EOT_
 
-#-------------------------------------------------------------------------------
-# Make Samba User List File (pdbedit -L -w にて出力されたもの)
-#-------------------------------------------------------------------------------
-	cat <<- _EOT_ > ${SMB_FILE}
-		administrator:1001:E52CAC67419A9A224A3B108F3FA6CB6D:8846F7EAEE8FB117AD06BDD830B7586C:[U          ]:LCT-5451C9F9:
+		# Make Samba User List File (pdbedit -L -w にて出力されたもの) ---------
+		cat <<- _EOT_ > ${SMB_FILE}
+			administrator:1001:E52CAC67419A9A224A3B108F3FA6CB6D:8846F7EAEE8FB117AD06BDD830B7586C:[U          ]:LCT-56BC0BA1:
 _EOT_
+	else
+		while read LINE
+		do
+			USERNAME=`echo ${LINE} | awk -F : '{print $1;}' | tr '[A-Z]' '[a-z]'`
+			FULLNAME=`echo ${LINE} | awk -F : '{print $2;}'`
+			USERIDNO=`echo ${LINE} | awk -F : '{print $3;}'`
+			PASSWORD=`echo ${LINE} | awk -F : '{print $4;}'`
+			LMPASSWD=`echo ${LINE} | awk -F : '{print $5;}'`
+			NTPASSWD=`echo ${LINE} | awk -F : '{print $6;}'`
+			ACNTFLAG=`echo ${LINE} | awk -F : '{print $7;}'`
+			CHNGTIME=`echo ${LINE} | awk -F : '{print $8;}'`
+
+			echo "${USERNAME}:${FULLNAME}:${USERIDNO}:${PASSWORD}"                          >> ${USR_FILE}
+			echo "${USERNAME}:${USERIDNO}:${LMPASSWD}:${NTPASSWD}:${ACNTFLAG}:${CHNGTIME}:" >> ${SMB_FILE}
+		done < ${LST_USER}
+	fi
 
 #-------------------------------------------------------------------------------
 # Locale Setup
@@ -415,7 +439,6 @@ _EOT_
 		 	dos charset = CP932
 		 	workgroup = ${WGP_NAME}
 		 	server string = Samba Server
-		 	map to guest = Bad User
 		 	obey pam restrictions = Yes
 		 	pam password change = Yes
 		 	passwd program = /usr/bin/passwd %u
@@ -429,21 +452,31 @@ _EOT_
 		 	log file = /var/log/samba/log.%m
 		 	max log size = 1000
 		 	unix extensions = No
+		 	load printers = No
+		 	disable spoolss = Yes
 		 	logon script = logon.bat
 		 	logon drive = U:
 		 	domain logons = Yes
 		 	dns proxy = No
 		 	usershare allow guests = Yes
 		 	panic action = /usr/share/samba/panic-action %d
-		 	idmap config * : range = 
+		 	idmap config * : range =
 		 	idmap config * : backend = tdb
-		 	force create mode = 01775
-		 	force directory mode = 01775
+		 	username = ${SMB_USER}
+		 	valid users = @${SMB_GRUP}
+		 	create mask = 0644
+		 	force create mode = 0770
+		 	force directory mode = 0770
+		 	hosts allow = 127., ${SVR_IPAD}.
+		 	hosts deny = ALL
 		 	wide links = Yes
 
 		[homes]
 		 	comment = Home Directories
+		 	username =
 		 	valid users = %S
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	browseable = No
 
 		[printers]
@@ -467,19 +500,22 @@ _EOT_
 		[netlogon]
 		 	comment = Network Logon Service
 		 	path = /share/data/adm/netlogon
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 
 		[profiles]
 		 	comment = Users profiles
 		 	path = /share/data/adm/profiles
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[cdrom]
 		 	comment = Samba server's CD-ROM
 		 	path = /mnt/cdrom
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 		 	locking = No
@@ -489,60 +525,69 @@ _EOT_
 		[share]
 		 	comment = Shared directories
 		 	path = /share
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	browseable = No
 
 		[data]
 		 	comment = Data directories
 		 	path = /share/data
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[usb]
 		 	comment = USB devices directories
 		 	path = /share/usb
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[wizd]
 		 	comment = Wizd directories
 		 	path = /share/wizd
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[pub]
 		 	comment = Public directories
 		 	path = /share/data/pub
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 
 		[web]
 		 	comment = User Directries (web files)
 		 	path = /share/data/usr/%U/web
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[app]
 		 	comment = User Directries (applications)
 		 	path = /share/data/usr/%U/app
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[dat]
 		 	comment = User Directries (data files)
 		 	path = /share/data/usr/%U/dat
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[usb1]
 		 	comment = Samba server's USB1
 		 	path = /mnt/usb1
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 		 	locking = No
@@ -552,7 +597,8 @@ _EOT_
 		[usb2]
 		 	comment = Samba server's USB2
 		 	path = /mnt/usb2
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 		 	locking = No
@@ -562,7 +608,8 @@ _EOT_
 		[usb3]
 		 	comment = Samba server's USB3
 		 	path = /mnt/usb3
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 		 	locking = No
@@ -572,7 +619,8 @@ _EOT_
 		[usb4]
 		 	comment = Samba server's USB4
 		 	path = /mnt/usb4
-		 	force user = www-data
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 		 	locking = No
@@ -582,6 +630,8 @@ _EOT_
 	if [ ${FLG_VIEW} -ne 0 ]; then
 		vi -c "set list" -c "set listchars=tab:>_" ${SMB_WORK}
 	fi
+
+#	touch -f /share/data/adm/netlogon/logon.bat
 
 #-------------------------------------------------------------------------------
 # Make share dir
@@ -604,17 +654,26 @@ _EOT_
 #-------------------------------------------------------------------------------
 # Move home dir
 #-------------------------------------------------------------------------------
-	id ${WWW_DATA}
+	cat /etc/group | grep ${SMB_GRUP}
 	if [ $? -ne 0 ]; then
-		useradd -c "${WWW_DATA}" ${WWW_DATA}
+		groupadd --system "${SMB_GRUP}"
+	fi
+
+	id ${SMB_USER}
+	if [ $? -ne 0 ]; then
+		useradd --system "${SMB_USER}" --groups "${SMB_GRUP}"
 	fi
 
 	mv /home/* /share/data/usr/
+
 	useradd -D -b /share/data/usr
-#	usermod -g "${WWW_DATA}" ${DEF_USER}
 	usermod -d /share/data/usr/${DEF_USER} ${DEF_USER}
+	usermod ${DEF_USER} -G sambashare
 	usermod -L ${DEF_USER}
-	rmdir /home
+
+	usermod root -G sambashare
+
+#	rmdir /home
 
 #-------------------------------------------------------------------------------
 # Make usb dir
@@ -672,8 +731,8 @@ _EOT_
 #-------------------------------------------------------------------------------
 # Setup share dir
 #-------------------------------------------------------------------------------
-	chmod -R 01775 /share/.
-	chown -R ${WWW_DATA}:${WWW_DATA} /share/.
+	chmod -R 770 /share/.
+	chown -R ${SMB_USER}:${SMB_GRUP} /share/.
 
 #-------------------------------------------------------------------------------
 # Make shell dir
@@ -1209,7 +1268,7 @@ _EOT_
 			rm -Rf /share/data/usr/${USERNAME}
 		fi
 		# Add users -----------------------------------------------------------
-		useradd -m -c "${FULLNAME}" -G ${WWW_DATA} -u ${USERIDNO} ${USERNAME}
+		useradd -m -c "${FULLNAME}" -G ${SMB_GRUP} -u ${USERIDNO} ${USERNAME}
 		# Make user dir -------------------------------------------------------
 		mkdir -p /share/data/usr/${USERNAME}
 		mkdir -p /share/data/usr/${USERNAME}/app
@@ -1218,8 +1277,8 @@ _EOT_
 		mkdir -p /share/data/usr/${USERNAME}/web/public_html
 		touch -f /share/data/usr/${USERNAME}/web/public_html/index.html
 		# Change user dir mode ------------------------------------------------
-		chmod -R 1770 /share/data/usr/${USERNAME}
-		chown -R ${WWW_DATA}:${WWW_DATA} /share/data/usr/${USERNAME}
+		chmod -R 770 /share/data/usr/${USERNAME}
+		chown -R ${SMB_USER}:${SMB_GRUP} /share/data/usr/${USERNAME}
 	done < ${USR_FILE}
 
 #-------------------------------------------------------------------------------
