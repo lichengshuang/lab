@@ -1,9 +1,9 @@
 #!/bin/bash
-################################################################################
+###############################################################################
 ##
-##	ファイル名	:	debian_install.sh
+##	ファイル名	:	install_vmware.sh
 ##
-##	機能概要	:	Debian Install用シェル [VMware対応]
+##	機能概要	:	Debian & Ubuntu Install用シェル [VMware対応]
 ##
 ##	入出力 I/F
 ##		INPUT	:	
@@ -15,7 +15,7 @@
 ##
 ##	改訂履歴	:	
 ##	   日付       版         名前      改訂内容
-##	---------- -------- -------------- -----------------------------------------
+##	---------- -------- -------------- ----------------------------------------
 ##	2014/11/02 000.0000 J.Itou         新規作成
 ##	2014/11/06 000.0000 J.Itou         処理見直し
 ##	2014/11/17 000.0000 J.Itou         処理見直し
@@ -51,11 +51,12 @@
 ##	2016/01/13 000.0000 J.Itou         処理見直し(clamav-freshclam見直し)
 ##	2016/02/10 000.0000 J.Itou         処理見直し(samba見直し)
 ##	2016/02/11 000.0000 J.Itou         処理見直し(ユーザー登録ファイル見直し)
+##	2016/02/12 000.0000 J.Itou         処理見直し(debian版とubuntu版、各vnware版の統合)
 ##	YYYY/MM/DD 000.0000 xxxxxxxxxxxxxx 
-################################################################################
+###############################################################################
 #set -nvx
 
-# Pause処理 --------------------------------------------------------------------
+# Pause処理 -------------------------------------------------------------------
 funcPause() {
 	RET_STS=$1
 
@@ -65,46 +66,51 @@ funcPause() {
 	fi
 }
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Initialize
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	DBG_FLAG=${DBG_FLAG:-0}
 	if [ ${DBG_FLAG} -ne 0 ]; then
 		set -vx
 	fi
 
-	# ユーザー環境に合わせて変更する部分 ---------------------------------------
-	# SET_DIST=oldoldstable						# oldoldstable
-	# SET_DIST=oldstable						# oldstable
-	# SET_DIST=stable							# stable
-	# SET_DIST=testing							# testing
-	# SET_DIST=squeeze							# debian 6
-	# SET_DIST=wheezy							# debian 7
-	# SET_DIST=jessie							# debian 8
-	# SET_DIST=stretch							# debian 9
+	# ユーザー環境に合わせて変更する部分 --------------------------------------
 	SVR_IPAD=192.168.1							# 本機の属するプライベート・アドレス
 	SVR_ADDR=1									# 本機のIPアドレス
-	SVR_NAME=sv-server							# 本機の名前
+#	SVR_NAME=sv-server							# 本機の名前
 	GWR_ADDR=254								# ゲートウェイのIPアドレス
 	GWR_NAME=gw-router							# ゲートウェイの名前
 	WGP_NAME=workgroup							# 本機の属するワークグループ名
 	NUM_HDDS=1									# インストール先のHDD台数
 	FLG_DHCP=0									# DHCP自動起動フラグ(0以外で自動起動)
 	ADR_DHCP="${SVR_IPAD}.64 ${SVR_IPAD}.79"	# DHCPの提供アドレス範囲
-	FLG_VMTL=1									# 0以外でVMware Toolsをインストール
+#	FLG_VMTL=1									# 0以外でVMware Toolsをインストール
 	DEF_USER=master								# インストール時に作成したユーザー名
 	FLG_AUTO=1									# 0以外でpreseed.cfgの環境を使う
 	FLG_VIEW=0									# 0以外でデバッグ用に設定ファイルを開く
+	FLG_SVER=1									# 0以外でサーバー仕様でセッティング
 #	VER_WMIN=1.780								# webminの最新バージョンを登録
 #	VGA_MODE="vga=792"							# コンソールの解像度：1024×768：1600万色
 #	VGA_RESO=1024x768							#   〃              ：
 	VGA_MODE="vga=795"							#   〃              ：1280×1024：1600万色
 	VGA_RESO=1280x1024x32						#   〃              ：
-	# ワーク変数設定 -----------------------------------------------------------
+	# ワーク変数設定 ----------------------------------------------------------
 	NOW_TIME=`date +"%Y%m%d%H%M%S"`
 	PGM_NAME=`basename $0 | sed -e 's/\..*$//'`
 
 	DST_NAME=`awk '/[A-Za-z]./ {print $1;}' /etc/issue | head -n 1 | tr '[A-Z]' '[a-z]'`
+
+	if [ ${FLG_SVER} -ne 0 ]; then
+		SVR_NAME=sv-${DST_NAME}
+	else
+		SVR_NAME=ws-${DST_NAME}
+	fi
+
+	if [ `echo ${PGM_NAME} | grep vmware` = "" ]; then
+		FLG_VMTL=0								# 0以外でVMware Toolsをインストール
+	else
+		FLG_VMTL=1								# 0以外でVMware Toolsをインストール
+	fi
 
 	SET_DIST=""
 
@@ -170,7 +176,7 @@ funcPause() {
 	DEV_NUM8=sdh
 
 	case "${NUM_HDDS}" in
-		# HDD 1台 --------------------------------------------------------------
+		# HDD 1台 -------------------------------------------------------------
 		1 )	DEV_HDD1=/dev/${DEV_NUM1}
 			DEV_HDD2=
 			DEV_HDD3=
@@ -181,7 +187,7 @@ funcPause() {
 			DEV_USB3=/dev/${DEV_NUM4}
 			DEV_USB4=/dev/${DEV_NUM5}
 			;;
-		# HDD 2台 --------------------------------------------------------------
+		# HDD 2台 -------------------------------------------------------------
 		2 )	DEV_HDD1=/dev/${DEV_NUM1}
 			DEV_HDD2=/dev/${DEV_NUM2}
 			DEV_HDD3=
@@ -192,7 +198,7 @@ funcPause() {
 			DEV_USB3=/dev/${DEV_NUM5}
 			DEV_USB4=/dev/${DEV_NUM6}
 			;;
-		# HDD 4台 ~ ------------------------------------------------------------
+		# HDD 4台 ~ -----------------------------------------------------------
 		* )	DEV_HDD1=/dev/${DEV_NUM1}
 			DEV_HDD2=/dev/${DEV_NUM2}
 			DEV_HDD3=/dev/${DEV_NUM3}
@@ -211,44 +217,65 @@ funcPause() {
 	CMD_AGET="apt-get -y -q"
 #	CMD_AGET="aptitude -y"
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Make work dir
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	mkdir -p ${DIR_WK}
 #	chmod 700 ${DIR_WK}
 	pushd ${DIR_WK}
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # System Update
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	if [ ! -f /etc/apt/sources.list.orig ]; then
 		cp -p /etc/apt/sources.list /etc/apt/sources.list.orig
 		sed "s/^deb/# deb/" < /etc/apt/sources.list.orig > /etc/apt/sources.list
 
-		cat <<- _EOT_ >> /etc/apt/sources.list
-			#-------------------------------------------------------------------------------
-			deb     http://security.debian.org/      ${SET_DIST}/updates                   main contrib non-free
-			deb-src http://security.debian.org/      ${SET_DIST}/updates                   main contrib non-free
+		case "${DST_NAME}" in
+			debian )
+				cat <<- _EOT_ >> /etc/apt/sources.list
+					#------------------------------------------------------------------------------
+					deb     http://security.debian.org/      ${SET_DIST}/updates                   main contrib non-free
+					deb-src http://security.debian.org/      ${SET_DIST}/updates                   main contrib non-free
 
-			deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}                           main contrib non-free
-			deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}                           main contrib non-free
+					deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}                           main contrib non-free
+					deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}                           main contrib non-free
 
-			deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-updates                   main contrib non-free
-			deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-updates                   main contrib non-free
+					deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-updates                   main contrib non-free
+					deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-updates                   main contrib non-free
 
-			# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-proposed-updates          main contrib non-free
-			# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-proposed-updates          main contrib non-free
+					# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-proposed-updates          main contrib non-free
+					# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-proposed-updates          main contrib non-free
 
-			# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-backports                 main contrib non-free
-			# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-backports                 main contrib non-free
+					# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-backports                 main contrib non-free
+					# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-backports                 main contrib non-free
 
-			# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd                  main contrib non-free
-			# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd                  main contrib non-free
+					# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd                  main contrib non-free
+					# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd                  main contrib non-free
 
-			# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd-proposed-updates main contrib non-free
-			# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd-proposed-updates main contrib non-free
-			#-------------------------------------------------------------------------------
+					# deb     http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd-proposed-updates main contrib non-free
+					# deb-src http://ftp.jp.debian.org/debian/ ${SET_DIST}-kfreebsd-proposed-updates main contrib non-free
+					#------------------------------------------------------------------------------
 _EOT_
+				;;
+			ubuntu )
+				cat <<- _EOT_ >> /etc/apt/sources.list
+					#------------------------------------------------------------------------------
+					deb     http://security.ubuntu.com/ubuntu    ${SET_DIST}-security  main restricted universe multiverse
+					deb-src http://security.ubuntu.com/ubuntu    ${SET_DIST}-security  main restricted universe multiverse
+
+					deb     http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}           main restricted universe multiverse
+					deb-src http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}           main restricted universe multiverse
+
+					deb     http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}-updates   main restricted universe multiverse
+					deb-src http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}-updates   main restricted universe multiverse
+
+					deb     http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}-backports main restricted universe multiverse
+					deb-src http://jp.archive.ubuntu.com/ubuntu/ ${SET_DIST}-backports main restricted universe multiverse
+					#------------------------------------------------------------------------------
+_EOT_
+				;;
+		esac
 	fi
 
 	${CMD_AGET} update
@@ -264,12 +291,12 @@ _EOT_
 	touch ${SMB_FILE}
 
 	if [ ! -f ${LST_USER} ]; then
-		# Make User List File --------------------------------------------------
+		# Make User List File -------------------------------------------------
 		cat <<- _EOT_ > ${USR_FILE}
 			Administrator:Administrator:1001:
 _EOT_
 
-		# Make Samba User List File (pdbedit -L -w にて出力されたもの) ---------
+		# Make Samba User List File (pdbedit -L -w にて出力されたもの) --------
 		cat <<- _EOT_ > ${SMB_FILE}
 			administrator:1001:E52CAC67419A9A224A3B108F3FA6CB6D:8846F7EAEE8FB117AD06BDD830B7586C:[U          ]:LCT-56BC0BA1:
 _EOT_
@@ -290,10 +317,19 @@ _EOT_
 		done < ${LST_USER}
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Locale Setup
-#-------------------------------------------------------------------------------
-	if [ ! -f /root/.bashrc.orig ]; then
+#------------------------------------------------------------------------------
+	if [ ! -f ~/.vimrc ]; then
+		cat <<- _EOT_ > ~/.vimrc
+			set number
+			set tabstop=4
+			set list
+			set listchars=tab:>_
+_EOT_
+	fi
+
+	if [ ! -f ~/.bashrc.orig ]; then
 		${CMD_AGET} install locales
 		funcPause $?
 #		dpkg-reconfigure locales
@@ -302,9 +338,9 @@ _EOT_
 		funcPause $?
 		update-locale LANG=ja_JP.UTF-8
 		funcPause $?
-		#-----------------------------------------------------------------------
-		cp -p /root/.bashrc /root/.bashrc.orig
-		cat <<- _EOT_ >> /root/.bashrc
+		#----------------------------------------------------------------------
+		cp -p ~/.bashrc ~/.bashrc.orig
+		cat <<- _EOT_ >> ~/.bashrc
 			#
 			case "\${TERM}" in
 			    "linux" )
@@ -317,15 +353,15 @@ _EOT_
 			export LANG
 _EOT_
 		if [ ${FLG_VIEW} -ne 0 ]; then
-			vi -c "set list" -c "set listchars=tab:>_" /root/.bashrc
+			vi ~/.bashrc
 		fi
 		. ~/.profile
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Network Setup
-#-------------------------------------------------------------------------------
-	# hostname -----------------------------------------------------------------
+#------------------------------------------------------------------------------
+	# hostname ----------------------------------------------------------------
 	if [ ! -f /etc/hostname.orig ]; then
 		cp -p /etc/hostname /etc/hostname.orig
 
@@ -334,29 +370,29 @@ _EOT_
 				${SVR_NAME}
 _EOT_
 			if [ ${FLG_VIEW} -ne 0 ]; then
-				vi -c "set list" -c "set listchars=tab:>_" /etc/hostname
+				vi /etc/hostname
 			fi
 			hostname -b ${SVR_NAME}
-			# hosts --------------------------------------------------------------------
+			# hosts -----------------------------------------------------------
 			if [ ! -f /etc/hosts.orig ]; then
 				cp -p /etc/hosts /etc/hosts.orig
 				cat <<- _EOT_ > /etc/hosts
 					${SVR_IPAD}.${SVR_ADDR}	${SVR_NAME}.${WGP_NAME}	${SVR_NAME}
-					#---------------------------------------------------------------------------
+					#------------------------------------------------------------------------------
 					# 127.0.1.1	${SVR_NAME}.${WGP_NAME}	${SVR_NAME}
 _EOT_
 				cat /etc/hosts.orig >> /etc/hosts
-				vi -c "set list" -c "set listchars=tab:>_" /etc/hosts
+				vi /etc/hosts
 			fi
-			# interfaces ---------------------------------------------------------------
+			# interfaces ------------------------------------------------------
 			if [ ! -f /etc/network/interfaces.orig ]; then
 				cp -p /etc/network/interfaces /etc/network/interfaces.orig
 				cat <<- _EOT_ >> /etc/network/interfaces
-					#---------------------------------------------------------------------------
+					#------------------------------------------------------------------------------
 					# The primary network interface
 					# allow-hotplug eth0
 					# iface eth0 inet dhcp
-					#---------------------------------------------------------------------------
+					#------------------------------------------------------------------------------
 					# The primary network interface
 					# allow-hotplug eth0
 					# iface eth0 inet static
@@ -368,21 +404,21 @@ _EOT_
 					#	# dns-* options are implemented by the resolvconf package, if installed
 					#	dns-nameservers ${SVR_IPAD}.${SVR_ADDR} ${SVR_IPAD}.${GWR_ADDR} 8.8.8.8 8.8.4.4 208.67.222.123 208.67.220.123
 					#	dns-search ${WGP_NAME}
-					#---------------------------------------------------------------------------
+					#------------------------------------------------------------------------------
 _EOT_
-				vi -c "set list" -c "set listchars=tab:>_" /etc/network/interfaces
+				vi /etc/network/interfaces
 			fi
-			# networks -----------------------------------------------------------------
+			# networks --------------------------------------------------------
 			if [ ! -f /etc/networks.orig ]; then
 				cp -p /etc/networks /etc/networks.orig
 				cat <<- _EOT_ >> /etc/networks
 					localnet	${SVR_IPAD}.0
 _EOT_
-				vi -c "set list" -c "set listchars=tab:>_" /etc/networks
+				vi /etc/networks
 			fi
 		fi
 	fi
-	# resolv.conf --------------------------------------------------------------
+	# resolv.conf -------------------------------------------------------------
 	if [ ! -f /etc/resolv.conf.orig ]; then
 		cp -p /etc/resolv.conf /etc/resolv.conf.orig
 		if [ ${FLG_AUTO} -eq 0 ]; then
@@ -403,33 +439,33 @@ _EOT_
 			cat /etc/resolv.conf.orig >> /etc/resolv.conf
 		fi
 		if [ ${FLG_VIEW} -ne 0 ]; then
-			vi -c "set list" -c "set listchars=tab:>_" /etc/resolv.conf
+			vi /etc/resolv.conf
 		fi
 	fi
-	# hosts.allow --------------------------------------------------------------
+	# hosts.allow -------------------------------------------------------------
 	if [ ! -f /etc/hosts.allow.orig ]; then
 		cp -p /etc/resolv.conf /etc/hosts.allow.orig
 		cat <<- _EOT_ >> /etc/hosts.allow
 			ALL: 127.0.0.1 ${SVR_IPAD}.
 _EOT_
 		if [ ${FLG_VIEW} -ne 0 ]; then
-			vi -c "set list" -c "set listchars=tab:>_" /etc/hosts.allow
+			vi /etc/hosts.allow
 		fi
 	fi
-	# hosts.deny ---------------------------------------------------------------
+	# hosts.deny --------------------------------------------------------------
 	if [ ! -f /etc/hosts.deny.orig ]; then
 		cp -p /etc/resolv.conf /etc/hosts.deny.orig
 		cat <<- _EOT_ >> /etc/hosts.deny
 			ALL: ALL
 _EOT_
 		if [ ${FLG_VIEW} -ne 0 ]; then
-			vi -c "set list" -c "set listchars=tab:>_" /etc/hosts.deny
+			vi /etc/hosts.deny
 		fi
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Make Samba Configure File
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	cat <<- _EOT_ > ${SMB_WORK}
 		# Samba config file created using SWAT
 		# from UNKNOWN (${SVR_IPAD}.${SVR_ADDR})
@@ -628,14 +664,14 @@ _EOT_
 		 	postexec = /bin/umount /mnt/usb4
 _EOT_
 	if [ ${FLG_VIEW} -ne 0 ]; then
-		vi -c "set list" -c "set listchars=tab:>_" ${SMB_WORK}
+		vi ${SMB_WORK}
 	fi
 
 #	touch -f /share/data/adm/netlogon/logon.bat
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Make share dir
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	mkdir -p /share
 	mkdir -p /share/data
 	mkdir -p /share/data/adm
@@ -651,9 +687,9 @@ _EOT_
 	mkdir -p /share/wizd/sounds
 #	touch -f /share/data/adm/netlogon/logon.bat
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Move home dir
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	cat /etc/group | grep ${SMB_GRUP}
 	if [ $? -ne 0 ]; then
 		groupadd --system "${SMB_GRUP}"
@@ -675,9 +711,9 @@ _EOT_
 
 #	rmdir /home
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Make usb dir
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	mkdir -p /mnt/cdrom
 	mkdir -p /mnt/floppy
 	mkdir -p /mnt/usb1
@@ -689,28 +725,28 @@ _EOT_
 	ln -s /mnt/usb2 /share/usb
 	ln -s /mnt/usb3 /share/usb
 	ln -s /mnt/usb4 /share/usb
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	if [ ! -f /etc/fstab.orig ]; then
 		cp -p /etc/fstab /etc/fstab.orig
-		unexpand -a /etc/fstab.orig > /etc/fstab
+		unexpand -a -t 4 /etc/fstab.orig > /etc/fstab
 		cat <<- _EOT_ >> /etc/fstab
-			# additional devices
-			# <file system>					<mount point>	<type>		<options>		<dump>	<pass>
-			# /dev/sr0					/media/cdrom0	udf,iso9660	rw,user,noauto		0	0
-			# /dev/fd0					/media/floppy0	auto		rw,user,noauto		0	0
-			# /dev/sr0					/mnt/cdrom	udf,iso9660	rw,user,noauto		0	0
-			# /dev/fd0					/mnt/floppy	auto		rw,user,noauto		0	0
-			# ${DEV_USB1}1					/mnt/usb1	auto		rw,user,noauto		0	0
-			# ${DEV_USB2}1					/mnt/usb2	auto		rw,user,noauto		0	0
-			# ${DEV_USB3}1					/mnt/usb3	auto		rw,user,noauto		0	0
-			# ${DEV_USB4}1					/mnt/usb4	auto		rw,user,noauto		0	0
+			# additional devices --------------------------------------------------------------------------------------------------
+			# <file system>									<mount point>	<type>			<options>				<dump>	<pass>
+			# /dev/sr0										/media/cdrom0	udf,iso9660		rw,user,noauto			0		0
+			# /dev/fd0										/media/floppy0	auto			rw,user,noauto			0		0
+			# /dev/sr0										/mnt/cdrom		udf,iso9660		rw,user,noauto			0		0
+			# /dev/fd0										/mnt/floppy		auto			rw,user,noauto			0		0
+			# ${DEV_USB1}1										/mnt/usb1		auto			rw,user,noauto			0		0
+			# ${DEV_USB2}1										/mnt/usb2		auto			rw,user,noauto			0		0
+			# ${DEV_USB3}1										/mnt/usb3		auto			rw,user,noauto			0		0
+			# ${DEV_USB4}1										/mnt/usb4		auto			rw,user,noauto			0		0
 _EOT_
-		vi -c "set list" -c "set listchars=tab:>_" /etc/fstab
+		vi /etc/fstab
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Make floppy dir
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	if [ ! -d /media/floppy0 ]; then
 		pushd /media
 		mkdir floppy0
@@ -718,9 +754,9 @@ _EOT_
 		popd
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Make cd-rom dir
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	if [ ! -d /media/cdrom0 ]; then
 		pushd /media
 		mkdir cdrom0
@@ -728,21 +764,21 @@ _EOT_
 		popd
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Setup share dir
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	chmod -R 770 /share/.
 	chown -R ${SMB_USER}:${SMB_GRUP} /share/.
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Make shell dir
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	mkdir -p /usr/sh
 	mkdir -p /var/log/sh
 
 	cat <<- _EOT_ > /usr/sh/USRCOMMON.def
 		#!/bin/bash
-		################################################################################
+		###############################################################################
 		##
 		##	ファイル名	:	USRCOMMON.def
 		##
@@ -758,18 +794,18 @@ _EOT_
 		##
 		##	改訂履歴	:	
 		##	   日付       版         名前      改訂内容
-		##	---------- -------- -------------- -----------------------------------------
+		##	---------- -------- -------------- ----------------------------------------
 		##	2013/10/27 000.0000 J.Itou         新規作成
 		##	2014/11/04 000.0000 J.Itou         4HDD版仕様変更
 		##	2014/12/22 000.0000 J.Itou         処理見直し
 		##	`date +"%Y/%m/%d"` 000.0000 J.Itou         自動作成
 		##	YYYY/MM/DD 000.0000 xxxxxxxxxxxxxx 
-		##	---------- -------- -------------- -----------------------------------------
-		################################################################################
+		##	---------- -------- -------------- ----------------------------------------
+		###############################################################################
 
-		#-------------------------------------------------------------------------------
+		#------------------------------------------------------------------------------
 		# ユーザー変数定義
-		#-------------------------------------------------------------------------------
+		#------------------------------------------------------------------------------
 
 		# USBデバイス変数定義
 		APL_MNT_DV1="${DEV_USB1}1"
@@ -784,18 +820,18 @@ _EOT_
 _EOT_
 
 	if [ ${FLG_VIEW} -ne 0 ]; then
-		vi -c "set list" -c "set listchars=tab:>_" /usr/sh/USRCOMMON.def
+		vi /usr/sh/USRCOMMON.def
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install kernel compilers
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install build-essential kernel-package libncurses5-dev fuse uuid-runtime
 	funcPause $?
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install clamav
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install clamav
 	funcPause $?
 
@@ -816,15 +852,15 @@ _EOT_
 	update-rc.d clamav-freshclam disable
 	service --status-all | grep clamav-freshclam
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install ntpdate
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install ntpdate
 	funcPause $?
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install ssh
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 #	${CMD_AGET} install ssh
 #	funcPause $?
 	#---------------------------------------------------------------------------
@@ -834,15 +870,15 @@ _EOT_
 			UseDNS no
 _EOT_
 		if [ ${FLG_VIEW} -ne 0 ]; then
-			vi -c "set list" -c "set listchars=tab:>_" /etc/ssh/sshd_config
+			vi /etc/ssh/sshd_config
 		fi
 	fi
 
 	/etc/init.d/ssh restart
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install apache2
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install apache2
 	funcPause $?
 
@@ -868,19 +904,19 @@ _EOT_
 			</IfModule>
 _EOT_
 		if [ ${FLG_VIEW} -ne 0 ]; then
-			vi -c "set list" -c "set listchars=tab:>_" /etc/apache2/mods-available/userdir.conf
+			vi /etc/apache2/mods-available/userdir.conf
 		fi
 	fi
 
 	a2enmod userdir
 	/etc/init.d/apache2 restart
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install proftpd
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install proftpd
 	funcPause $?
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	if [ ! -f /etc/proftpd/proftpd.conf.orig ]; then
 		cp -p /etc/proftpd/proftpd.conf /etc/proftpd/proftpd.conf.orig
 		cat <<- _EOT_ >> /etc/proftpd/proftpd.conf
@@ -891,10 +927,10 @@ _EOT_
 			</Global>
 _EOT_
 		if [ ${FLG_VIEW} -ne 0 ]; then
-			vi -c "set list" -c "set listchars=tab:>_" /etc/proftpd/proftpd.conf
+			vi /etc/proftpd/proftpd.conf
 		fi
 	fi
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	if [ ! -f /etc/ftpusers.orig ]; then
 		cp -p /etc/ftpusers /etc/ftpusers.orig
 		cat <<- _EOT_ >> /etc/ftpusers
@@ -903,30 +939,30 @@ _EOT_
 		sed 's/root/#\ root/' < /etc/ftpusers.orig > /etc/ftpusers
 
 		if [ ${FLG_VIEW} -ne 0 ]; then
-			vi -c "set list" -c "set listchars=tab:>_" /etc/ftpusers
+			vi /etc/ftpusers
 		fi
 	fi
 
 	/etc/init.d/proftpd restart
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install samba
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install samba samba-doc
 	funcPause $?
 
 #	${CMD_AGET} install swat
 #	funcPause $?
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install rsync
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install rsync
 	funcPause $?
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install FDclone
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install fdclone
 	funcPause $?
 	#---------------------------------------------------------------------------
@@ -942,21 +978,21 @@ _EOT_
 
 	cp -p .fd2rc ~/
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install gufw
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install gufw
 	funcPause $?
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install mrtg
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install mrtg hddtemp
 	funcPause $?
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	mkdir -p /var/www/mrtg
 	touch /var/www/mrtg/index.html
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	cat <<- _EOT_ > /var/www/mrtg/index.html
 		<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 		<HTML>
@@ -972,7 +1008,7 @@ _EOT_
 		    <DIV><A href="diskuserate1.html">diskuserate1[rootfs]</A></DIV>
 		    <DIV><A href="diskuserate2.html">diskuserate2[/share]</A></DIV>
 _EOT_
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	i=2
 	for str in ${DEV_RATE}
 	do
@@ -981,7 +1017,7 @@ _EOT_
 			    <DIV><A href="diskuserate${i}.html">diskuserate${i}[${str}1]</A></DIV>
 _EOT_
 	done
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	i=0
 	for str in ${DEV_TEMP}
 	do
@@ -990,17 +1026,17 @@ _EOT_
 			    <DIV><A href="hdtemp${i}.html">hdtemp${i}[${str}]</A></DIV>
 _EOT_
 	done
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	cat <<- _EOT_ >> /var/www/mrtg/index.html
 		  </BODY>
 		</HTML>
 _EOT_
 	if [ ${FLG_VIEW} -ne 0 ]; then
-		vi -c "set list" -c "set listchars=tab:>_" /var/www/mrtg/index.html
+		vi /var/www/mrtg/index.html
 	fi
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	if [ ! -f /etc/mrtg.cfg.orig ]; then
-		#-----------------------------------------------------------------------
+		#----------------------------------------------------------------------
 		cp -p /etc/mrtg.cfg /etc/mrtg.cfg.orig
 		cat <<- _EOT_ >> /etc/mrtg.cfg
 
@@ -1019,7 +1055,7 @@ _EOT_
 			LegendO[diskuserate1]:
 
 _EOT_
-		#-----------------------------------------------------------------------
+		#----------------------------------------------------------------------
 		cp -p /etc/mrtg.cfg /etc/mrtg.cfg.orig
 		cat <<- _EOT_ >> /etc/mrtg.cfg
 
@@ -1038,7 +1074,7 @@ _EOT_
 			LegendO[diskuserate2]:
 
 _EOT_
-		#-----------------------------------------------------------------------
+		#----------------------------------------------------------------------
 		i=2
 		for str in ${DEV_RATE}
 		do
@@ -1060,7 +1096,7 @@ _EOT_
 
 _EOT_
 		done
-		#-----------------------------------------------------------------------
+		#----------------------------------------------------------------------
 		i=0
 		for str in ${DEV_TEMP}
 		do
@@ -1083,68 +1119,68 @@ _EOT_
 _EOT_
 		done
 		if [ ${FLG_VIEW} -ne 0 ]; then
-			vi -c "set list" -c "set listchars=tab:>_" /etc/mrtg.cfg
+			vi /etc/mrtg.cfg
 		fi
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install bind9
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install bind9
 	funcPause $?
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	cat <<- _EOT_ > /var/cache/bind/${WGP_NAME}.zone
 		\$TTL 3600
 		\$ORIGIN ${WGP_NAME}.
-		@				IN	SOA	${SVR_NAME}. root.${SVR_NAME}. (
-		 					1
-		 					1800
-		 					900
-		 					86400
-		 					1200 )
-		 				IN	NS	${SVR_NAME}
-		 				IN	NS	${GWR_NAME}
-		 				IN	NS	google-public-dns-a.google.com
-		 				IN	NS	google-public-dns-b.google.com
-		 				IN	NS	resolver1-fs.opendns.com
-		 				IN	NS	resolver2-fs.opendns.com
-		${SVR_NAME}			IN	A	${SVR_IPAD}.${SVR_ADDR}
-		${GWR_NAME}			IN	A	${SVR_IPAD}.${GWR_ADDR}
-		google-public-dns-a.google.com	IN	A	8.8.8.8
-		google-public-dns-b.google.com	IN	A	8.8.4.4
-		resolver1-fs.opendns.com		IN	A	208.67.222.123
-		resolver2-fs.opendns.com		IN	A	208.67.220.123
+		@								IN		SOA		${SVR_NAME}. root.${SVR_NAME}. (
+		 										1
+		 										1800
+		 										900
+		 										86400
+		 										1200 )
+		 								IN		NS		${SVR_NAME}
+		 								IN		NS		${GWR_NAME}
+		 								IN		NS		google-public-dns-a.google.com
+		 								IN		NS		google-public-dns-b.google.com
+		 								IN		NS		resolver1-fs.opendns.com
+		 								IN		NS		resolver2-fs.opendns.com
+		${SVR_NAME}						IN		A		${SVR_IPAD}.${SVR_ADDR}
+		${GWR_NAME}						IN		A		${SVR_IPAD}.${GWR_ADDR}
+		google-public-dns-a.google.com	IN		A		8.8.8.8
+		google-public-dns-b.google.com	IN		A		8.8.4.4
+		resolver1-fs.opendns.com		IN		A		208.67.222.123
+		resolver2-fs.opendns.com		IN		A		208.67.220.123
 _EOT_
 	if [ ${FLG_VIEW} -ne 0 ]; then
-		vi -c "set list" -c "set listchars=tab:>_" /var/cache/bind/${WGP_NAME}.zone
+		vi /var/cache/bind/${WGP_NAME}.zone
 	fi
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	cat <<- _EOT_ > /var/cache/bind/${WGP_NAME}.rev
 		\$TTL 3600
 		\$ORIGIN 1.168.192.in-addr.arpa.
-		@				IN	SOA	${SVR_NAME}.${WGP_NAME}. root.${SVR_NAME}.${WGP_NAME}. (
-		 					1
-		 					1800
-		 					900
-		 					86400
-		 					1200 )
-		 				IN	NS	${SVR_NAME}.${WGP_NAME}.
-		 				IN	NS	${GWR_NAME}.${WGP_NAME}.
-		 				IN	NS	google-public-dns-a.google.com
-		 				IN	NS	google-public-dns-b.google.com
-		 				IN	NS	resolver1-fs.opendns.com
-		 				IN	NS	resolver2-fs.opendns.com
-		${SVR_ADDR}			IN	PTR	${SVR_NAME}.${WGP_NAME}.
-		${GWR_ADDR}			IN	PTR	${GWR_NAME}.${WGP_NAME}.
-		8.8.8.8				IN	PTR	google-public-dns-a.google.com
-		8.8.4.4				IN	PTR	google-public-dns-b.google.com
-		208.67.222.123		IN	PTR	resolver1-fs.opendns.com
-		208.67.220.123		IN	PTR	resolver2-fs.opendns.com
+		@								IN		SOA		${SVR_NAME}.${WGP_NAME}. root.${SVR_NAME}.${WGP_NAME}. (
+		 										1
+		 										1800
+		 										900
+		 										86400
+		 										1200 )
+		 								IN		NS		${SVR_NAME}.${WGP_NAME}.
+		 								IN		NS		${GWR_NAME}.${WGP_NAME}.
+		 								IN		NS		google-public-dns-a.google.com
+		 								IN		NS		google-public-dns-b.google.com
+		 								IN		NS		resolver1-fs.opendns.com
+		 								IN		NS		resolver2-fs.opendns.com
+		${SVR_ADDR}								IN		PTR		${SVR_NAME}.${WGP_NAME}.
+		${GWR_ADDR}								IN		PTR		${GWR_NAME}.${WGP_NAME}.
+		8.8.8.8							IN		PTR		google-public-dns-a.google.com
+		8.8.4.4							IN		PTR		google-public-dns-b.google.com
+		208.67.222.123					IN		PTR		resolver1-fs.opendns.com
+		208.67.220.123					IN		PTR		resolver2-fs.opendns.com
 _EOT_
 	if [ ${FLG_VIEW} -ne 0 ]; then
-		vi -c "set list" -c "set listchars=tab:>_" /var/cache/bind/${WGP_NAME}.rev
+		vi /var/cache/bind/${WGP_NAME}.rev
 	fi
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	cat <<- _EOT_ >> /etc/bind/named.conf.local
 		zone "${WGP_NAME}" {
 		 	type master;
@@ -1159,9 +1195,9 @@ _EOT_
 		};
 _EOT_
 	if [ ${FLG_VIEW} -ne 0 ]; then
-		vi -c "set list" -c "set listchars=tab:>_" /etc/bind/named.conf.local
+		vi /etc/bind/named.conf.local
 	fi
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	cat <<- _EOT_ >> /etc/bind/named.conf.options
 		acl lan {
 		 	127.0.0.1;
@@ -1169,16 +1205,16 @@ _EOT_
 		};
 _EOT_
 	if [ ${FLG_VIEW} -ne 0 ]; then
-		vi -c "set list" -c "set listchars=tab:>_" /etc/bind/named.conf.options
+		vi /etc/bind/named.conf.options
 	fi
 	/etc/init.d/bind9 restart
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install dhcp
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install isc-dhcp-server
 	funcPause $?
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	cat <<- _EOT_ > /etc/dhcp/dhcpd.conf
 		subnet ${SVR_IPAD}.0 netmask 255.255.255.0 {
 		 	option time-servers ntp.nict.jp;
@@ -1195,7 +1231,7 @@ _EOT_
 
 _EOT_
 	if [ ${FLG_VIEW} -ne 0 ]; then
-		vi -c "set list" -c "set listchars=tab:>_" /etc/dhcp/dhcpd.conf
+		vi /etc/dhcp/dhcpd.conf
 	fi
 
 	if [ ${FLG_DHCP} -ne 0 ]; then
@@ -1206,9 +1242,9 @@ _EOT_
 		insserv -r isc-dhcp-server
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install Webmin
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	${CMD_AGET} install perl libnet-ssleay-perl openssl libauthen-pam-perl libpam-runtime libio-pty-perl apt-show-versions python
 	funcPause $?
 
@@ -1231,22 +1267,22 @@ _EOT_
 	else
 		dpkg -i webmin_${VER_WMIN}_all.deb
 	fi
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	if [ ! -f /etc/webmin/config.orig ]; then
 		cp -p /etc/webmin/config /etc/webmin/config.orig
 		cat <<- _EOT_ >> /etc/webmin/config
 			webprefix=
 			lang_root=ja_JP.UTF-8
 _EOT_
-#		vi -c "set list" -c "set listchars=tab:>_" /etc/webmin/config
+#		vi /etc/webmin/config
 	fi
-	#---------------------------------------------------------------------------
+	#--------------------------------------------------------------------------
 	if [ ! -f /etc/webmin/time/config.orig ]; then
 		cp -p /etc/webmin/time/config /etc/webmin/time/config.orig
 		cat <<- _EOT_ >> /etc/webmin/time/config
 			timeserver=ntp.nict.jp
 _EOT_
-#		vi -c "set list" -c "set listchars=tab:>_" /etc/webmin/time/config
+#		vi /etc/webmin/time/config
 	fi
 
 	/etc/init.d/webmin restart
@@ -1281,9 +1317,9 @@ _EOT_
 		chown -R ${SMB_USER}:${SMB_GRUP} /share/data/usr/${USERNAME}
 	done < ${USR_FILE}
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Setup Samba User
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	SMB_PWDB=`find /var/lib/samba/ -name passdb.tdb -print`
 	USR_LIST=`pdbedit -L | awk -F : '{print $1;}'`
 	for USR_NAME in ${USR_LIST}
@@ -1292,9 +1328,9 @@ _EOT_
 	done
 	pdbedit -i smbpasswd:${SMB_FILE} -e tdbsam:${SMB_PWDB}
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Add smb.conf
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	if [ ! -f ${SMB_BACK} ]; then
 		cp -p ${SMB_CONF} ${SMB_BACK}
 		cat ${SMB_WORK} > ${SMB_CONF}
@@ -1302,13 +1338,13 @@ _EOT_
 
 	/etc/init.d/samba restart
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Install VMware Tools
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	if [ ${FLG_VMTL} -ne 0 ]; then
 		${CMD_AGET} install linux-headers-`uname -r`
 		funcPause $?
-		#-----------------------------------------------------------------------
+		#----------------------------------------------------------------------
 		VMW_CD=${MNT_CD}/VMwareTools-*.tar.gz
 		while :
 		do
@@ -1326,7 +1362,7 @@ _EOT_
 				fi
 			fi
 		done
-		#-----------------------------------------------------------------------
+		#----------------------------------------------------------------------
 #		ORG_CC=${CC}
 #		ORG_CXX=${CXX}
 #		export CC=gcc-4.3
@@ -1339,9 +1375,9 @@ _EOT_
 #		export CXX=${ORG_CXX}
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Cron (xxd -ps にて出力されたもの)
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	cat <<- _EOT_ > ${TGZ_WORK}
 		1f8b0800f5cc88560003ed5c7b73d35616e75feb53dc8a6481761c59b29d
 		b4306627c481a44409133bed329409c656620f899db1e440ca7a86d81b08
@@ -1461,9 +1497,9 @@ _EOT_
 	ls -al
 	popd
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Cron
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	cat <<- _EOT_ > ${CRN_FILE}
 		SHELL = /bin/bash
 		PATH = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -1478,9 +1514,9 @@ _EOT_
 
 	crontab ${CRN_FILE}
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # GRUB
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	if [ ! -f /etc/default/grub.orig ]; then
 		cp -p /etc/default/grub /etc/default/grub.orig
 
@@ -1497,9 +1533,9 @@ _EOT_
 		update-grub
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Disable IPv6
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	if [ ! -f /etc/sysctl.conf.orig ]; then
 		cp -p /etc/sysctl.conf /etc/sysctl.conf.orig
 
@@ -1516,9 +1552,9 @@ _EOT_
 	sysctl -p
 	ifconfig
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Backup
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	pushd /
 	tar -czf /work/bk_etc.tgz    etc
 #	tar -czf /work/bk_home.tgz   home
@@ -1527,16 +1563,16 @@ _EOT_
 	tar -czf /work/bk_cron.tgz   var/spool/cron/crontabs
 	popd
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # RADI Status
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	if [ -f /proc/mdstat ]; then
 		cat /proc/mdstat
 	fi
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Termination
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	rm -f ${TGZ_WORK}
 	rm -f ${CRN_FILE}
 	rm -f ${USR_FILE}
@@ -1544,11 +1580,17 @@ _EOT_
 	rm -f ${SMB_WORK}
 	popd
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Exit
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 	exit 0
 
-#-------------------------------------------------------------------------------
-# End of file
-#-------------------------------------------------------------------------------
+###############################################################################
+# memo                                                                        #
+###############################################################################
+# for %I in (*.*) do fc /b "%~nxI" "V:\Application\FreeWare\win32\%~nxI"
+# for /d %I in ("r:\My Documents\Download\dlc\*.*") do robocopy /l /mov /xo "%~fI" "r:\My Documents\Download\update"
+# apt-get update && apt-get -y upgrade && apt-get -y dist-upgrade
+#==============================================================================
+# End of file                                                                 =
+#==============================================================================
