@@ -1,0 +1,141 @@
+# *****************************************************************************
+# LiveCDCustomization                                                         *
+# *****************************************************************************
+
+# == Install pre-requisities ==================================================
+# -- Make sure that you have installed the needed tools -----------------------
+  apt-get -y install squashfs-tools genisoimage
+
+# == Obtain the base system ===================================================
+# -- Copy it into an empty directory ------------------------------------------
+  cd ~
+  rm -Rf ~/livecdtmp
+  mkdir -p ~/livecdtmp
+  cd ~/livecdtmp
+  cp /mnt/hgfs/Share/My\ Documents/Download/Linux/iso/Ubuntu/ubuntu-15.10-desktop-amd64.iso .
+
+# == Extract the CD .iso contents =============================================
+# -- Mount the Desktop .iso ---------------------------------------------------
+  cd ~/livecdtmp
+  rm -Rf mnt
+  mkdir -p mnt
+  mount -o loop ubuntu-15.10-desktop-amd64.iso mnt
+
+# -- Extract .iso contents into dir 'extract-cd' ------------------------------
+  rm -Rf extract-cd
+  mkdir -p extract-cd
+  rsync --exclude=/casper/filesystem.squashfs -a mnt/ extract-cd
+
+# == Extract the Desktop system ===============================================
+# -- Extract the SquashFS filesystem ------------------------------------------
+  rm -Rf squashfs-root edit
+  unsquashfs -no-progress mnt/casper/filesystem.squashfs
+  mv squashfs-root edit
+  umount mnt
+
+# == Prepare and chroot =======================================================
+# -- 
+  mount -o bind /run/ edit/run
+
+# -- The remaining steps are good, unlike the ones above: ---------------------
+  mount --bind /dev/ edit/dev
+# --
+   chroot edit
+# --
+  mount -t proc   none /proc
+  mount -t sysfs  none /sys
+  mount -t devpts none /dev/pts
+
+# -- To avoid locale issues and in order to import GPG keys
+  export HOME=/root
+  export LC_ALL=C
+
+# == Customizations ===========================================================
+# -- Module update ------------------------------------------------------------
+  apt-get clean
+  apt-get autoclean
+  apt-get -f install
+  dpkg --configure -a
+  apt-get update
+  apt-get -y --with-new-pkgs upgrade
+  apt-get -y --ignore-hold dist-upgrade
+
+# -- Prerequisites ------------------------------------------------------------
+# dbus-uuidgen > /var/lib/dbus/machine-id
+# dpkg-divert --local --rename --add /sbin/initctl
+# ln -s /bin/true /sbin/initctl
+
+# -- Tasks --------------------------------------------------------------------
+# dpkg-query -W --showformat='${Installed-Size}\t${Package}\n' | sort -nr | less
+  apt-get -y purge linux-image-extra-4.2.0-16-generic linux-headers-4.2.0-16 linux-image-4.2.0-16-generic
+# update-grub
+  apt-get -y install language-pack-gnome-ja
+  apt-get -y install ssh
+  apt-get -y install smbclient
+
+# == Custom Background for GNOME ==============================================
+
+# == Change gconf values (fonts, panels etc.) =================================
+
+# == Setting regional defaults ================================================
+
+# == Customization limits =====================================================
+
+# == Miscellaneous Defaults ===================================================
+  dpkg-reconfigure tzdata
+  locale-gen ja_JP.UTF-8
+  update-locale LANG=ja_JP.UTF-8 LANGUAGE=ja_JP.UTF-8 LC_ALL=ja_JP.UTF-8
+
+# == Advanced Customizations ==================================================
+# -- Live CD Kernel -----------------------------------------------------------
+
+# -- Removing the (Casper) Autologin ------------------------------------------
+
+# -- Boot init ----------------------------------------------------------------
+
+# -- Rebuilding initrd --------------------------------------------------------
+
+# == Cleanup ==================================================================
+  apt-get -y autoremove
+  apt-get autoclean
+  apt-get clean
+  rm -rf /tmp/* ~/.bash_history
+# rm /etc/hosts
+# rm /var/lib/dbus/machine-id
+# rm /sbin/initctl
+# dpkg-divert --rename --remove /sbin/initctl
+# -- now umount (unmount) special filesystems and exit chroot -----------------
+  umount /proc || umount -lf /proc
+  umount /sys
+  umount /dev/pts
+
+  exit
+
+  umount edit/dev
+  umount edit/run || umount -lf edit/run
+
+# == Producing the CD image ===================================================
+# -- Regenerate manifest ------------------------------------------------------
+  chmod +w extract-cd/casper/filesystem.manifest
+  chroot edit dpkg-query -W --showformat='${Package} ${Version}\n' > extract-cd/casper/filesystem.manifest
+
+  cp extract-cd/casper/filesystem.manifest extract-cd/casper/filesystem.manifest-desktop
+  sed -i '/ubiquity/d' extract-cd/casper/filesystem.manifest-desktop
+  sed -i '/casper/d' extract-cd/casper/filesystem.manifest-desktop
+
+# -- Compress filesystem ------------------------------------------------------
+  mksquashfs edit extract-cd/casper/filesystem.squashfs -no-progress
+  printf $(du -sx --block-size=1 edit | cut -f1) > extract-cd/casper/filesystem.size
+
+# -- Remove old md5sum.txt and calculate new md5 sums -------------------------
+  cd extract-cd
+  rm md5sum.txt
+  find -type f -print0 | xargs -0 md5sum | grep -v isolinux/boot.cat | tee md5sum.txt
+
+# -- Create the ISO image -----------------------------------------------------
+  mkisofs -D -r -V "Ubuntu 15.10 amd64" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ../ubuntu-15.10-desktop-amd64-custom.iso .
+
+# -- 
+  cp -p ~/livecdtmp/ubuntu-15.10-desktop-amd64-custom.iso /mnt/hgfs/Share/My\ Documents/Download/Linux/iso/Ubuntu/
+
+# -----------------------------------------------------------------------------
