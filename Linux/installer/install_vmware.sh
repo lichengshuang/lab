@@ -52,6 +52,7 @@
 ##	2016/02/10 000.0000 J.Itou         処理見直し(samba見直し)
 ##	2016/02/11 000.0000 J.Itou         処理見直し(ユーザー登録ファイル見直し)
 ##	2016/02/12 000.0000 J.Itou         処理見直し(debian版とubuntu版、各vnware版の統合)
+##	2016/02/17 000.0000 J.Itou         処理見直し(apt-get installの一括処理)
 ##	YYYY/MM/DD 000.0000 xxxxxxxxxxxxxx 
 ###############################################################################
 #set -nvx
@@ -77,7 +78,7 @@ funcPause() {
 	# ユーザー環境に合わせて変更する部分 --------------------------------------
 	SVR_IPAD=192.168.1							# 本機の属するプライベート・アドレス
 	SVR_ADDR=1									# 本機のIPアドレス
-#	SVR_NAME=sv-server							# 本機の名前
+	SVR_NAME=`hostname`							# 本機の名前
 	GWR_ADDR=254								# ゲートウェイのIPアドレス
 	GWR_NAME=gw-router							# ゲートウェイの名前
 	WGP_NAME=workgroup							# 本機の属するワークグループ名
@@ -100,10 +101,12 @@ funcPause() {
 
 	DST_NAME=`awk '/[A-Za-z]./ {print $1;}' /etc/issue | head -n 1 | tr '[A-Z]' '[a-z]'`
 
-	if [ ${FLG_SVER} -ne 0 ]; then
-		SVR_NAME=sv-${DST_NAME}
-	else
-		SVR_NAME=ws-${DST_NAME}
+	if [ ${SVR_NAME} = "" ]; then
+		if [ ${FLG_SVER} -ne 0 ]; then
+			SVR_NAME=sv-${DST_NAME}
+		else
+			SVR_NAME=ws-${DST_NAME}
+		fi
 	fi
 
 	if [ `echo ${PGM_NAME} | grep vmware` = "" ]; then
@@ -283,6 +286,28 @@ _EOT_
 	${CMD_AGET} dist-upgrade
 
 #------------------------------------------------------------------------------
+# Application Install
+#------------------------------------------------------------------------------
+	${CMD_AGET} install	locales \
+						build-essential kernel-package libncurses5-dev fuse uuid-runtime \
+						clamav \
+						ntpdate \
+						ssh \
+						apache2 \
+						proftpd \
+						samba samba-doc smbclient \
+						rsync \
+						fdclone \
+						gufw \
+						mrtg hddtemp \
+						bind9 \
+						isc-dhcp-server \
+						perl libnet-ssleay-perl openssl libauthen-pam-perl libpam-runtime libio-pty-perl apt-show-versions python \
+						linux-headers-`uname -r`
+
+	funcPause $?
+#
+#------------------------------------------------------------------------------
 # Make User file
 #------------------------------------------------------------------------------
 	rm -f ${USR_FILE}
@@ -330,8 +355,8 @@ _EOT_
 	fi
 
 	if [ ! -f ~/.bashrc.orig ]; then
-		${CMD_AGET} install locales
-		funcPause $?
+#		${CMD_AGET} install locales
+#		funcPause $?
 #		dpkg-reconfigure locales
 #		funcPause $?
 		locale-gen
@@ -826,15 +851,15 @@ _EOT_
 #------------------------------------------------------------------------------
 # Install kernel compilers
 #------------------------------------------------------------------------------
-	${CMD_AGET} install build-essential kernel-package libncurses5-dev fuse uuid-runtime
-	funcPause $?
-
+#	${CMD_AGET} install build-essential kernel-package libncurses5-dev fuse uuid-runtime
+#	funcPause $?
+#
 #------------------------------------------------------------------------------
 # Install clamav
 #------------------------------------------------------------------------------
-	${CMD_AGET} install clamav
-	funcPause $?
-
+#	${CMD_AGET} install clamav
+#	funcPause $?
+#
 #	if [ ! -f /etc/clamav/freshclam.conf.orig ]; then
 #		cp -p /etc/clamav/freshclam.conf /etc/clamav/freshclam.conf.orig
 #
@@ -855,9 +880,9 @@ _EOT_
 #------------------------------------------------------------------------------
 # Install ntpdate
 #------------------------------------------------------------------------------
-	${CMD_AGET} install ntpdate
-	funcPause $?
-
+#	${CMD_AGET} install ntpdate
+#	funcPause $?
+#
 #------------------------------------------------------------------------------
 # Install ssh
 #------------------------------------------------------------------------------
@@ -879,9 +904,9 @@ _EOT_
 #------------------------------------------------------------------------------
 # Install apache2
 #------------------------------------------------------------------------------
-	${CMD_AGET} install apache2
-	funcPause $?
-
+#	${CMD_AGET} install apache2
+#	funcPause $?
+#
 	if [ ! -f /etc/apache2/mods-available/userdir.conf.orig ]; then
 		cp -p /etc/apache2/mods-available/userdir.conf /etc/apache2/mods-available/userdir.conf.orig
 		cat <<- _EOT_ > /etc/apache2/mods-available/userdir.conf
@@ -914,8 +939,8 @@ _EOT_
 #------------------------------------------------------------------------------
 # Install proftpd
 #------------------------------------------------------------------------------
-	${CMD_AGET} install proftpd
-	funcPause $?
+#	${CMD_AGET} install proftpd
+#	funcPause $?
 	#--------------------------------------------------------------------------
 	if [ ! -f /etc/proftpd/proftpd.conf.orig ]; then
 		cp -p /etc/proftpd/proftpd.conf /etc/proftpd/proftpd.conf.orig
@@ -948,23 +973,23 @@ _EOT_
 #------------------------------------------------------------------------------
 # Install samba
 #------------------------------------------------------------------------------
-	${CMD_AGET} install samba samba-doc
-	funcPause $?
-
+#	${CMD_AGET} install samba samba-doc
+#	funcPause $?
+#
 #	${CMD_AGET} install swat
 #	funcPause $?
-
+#
 #------------------------------------------------------------------------------
 # Install rsync
 #------------------------------------------------------------------------------
-	${CMD_AGET} install rsync
-	funcPause $?
-
+#	${CMD_AGET} install rsync
+#	funcPause $?
+#
 #------------------------------------------------------------------------------
 # Install FDclone
 #------------------------------------------------------------------------------
-	${CMD_AGET} install fdclone
-	funcPause $?
+#	${CMD_AGET} install fdclone
+#	funcPause $?
 	#---------------------------------------------------------------------------
 	cat <<- _EOT_ > .fd2rc
 		LANGUAGE="utf8"
@@ -981,14 +1006,14 @@ _EOT_
 #------------------------------------------------------------------------------
 # Install gufw
 #------------------------------------------------------------------------------
-	${CMD_AGET} install gufw
-	funcPause $?
-
+#	${CMD_AGET} install gufw
+#	funcPause $?
+#
 #------------------------------------------------------------------------------
 # Install mrtg
 #------------------------------------------------------------------------------
-	${CMD_AGET} install mrtg hddtemp
-	funcPause $?
+#	${CMD_AGET} install mrtg hddtemp
+#	funcPause $?
 	#--------------------------------------------------------------------------
 	mkdir -p /var/www/mrtg
 	touch /var/www/mrtg/index.html
@@ -1126,8 +1151,8 @@ _EOT_
 #------------------------------------------------------------------------------
 # Install bind9
 #------------------------------------------------------------------------------
-	${CMD_AGET} install bind9
-	funcPause $?
+#	${CMD_AGET} install bind9
+#	funcPause $?
 	#--------------------------------------------------------------------------
 	cat <<- _EOT_ > /var/cache/bind/${WGP_NAME}.zone
 		\$TTL 3600
@@ -1212,8 +1237,8 @@ _EOT_
 #------------------------------------------------------------------------------
 # Install dhcp
 #------------------------------------------------------------------------------
-	${CMD_AGET} install isc-dhcp-server
-	funcPause $?
+#	${CMD_AGET} install isc-dhcp-server
+#	funcPause $?
 	#--------------------------------------------------------------------------
 	cat <<- _EOT_ > /etc/dhcp/dhcpd.conf
 		subnet ${SVR_IPAD}.0 netmask 255.255.255.0 {
@@ -1245,9 +1270,9 @@ _EOT_
 #------------------------------------------------------------------------------
 # Install Webmin
 #------------------------------------------------------------------------------
-	${CMD_AGET} install perl libnet-ssleay-perl openssl libauthen-pam-perl libpam-runtime libio-pty-perl apt-show-versions python
-	funcPause $?
-
+#	${CMD_AGET} install perl libnet-ssleay-perl openssl libauthen-pam-perl libpam-runtime libio-pty-perl apt-show-versions python
+#	funcPause $?
+#
 	while :
 	do
 		if [ -f "${DIR_WK}/${SET_WMIN}" ]; then
@@ -1342,8 +1367,8 @@ _EOT_
 # Install VMware Tools
 #------------------------------------------------------------------------------
 	if [ ${FLG_VMTL} -ne 0 ]; then
-		${CMD_AGET} install linux-headers-`uname -r`
-		funcPause $?
+#		${CMD_AGET} install linux-headers-`uname -r`
+#		funcPause $?
 		#----------------------------------------------------------------------
 		VMW_CD=${MNT_CD}/VMwareTools-*.tar.gz
 		while :

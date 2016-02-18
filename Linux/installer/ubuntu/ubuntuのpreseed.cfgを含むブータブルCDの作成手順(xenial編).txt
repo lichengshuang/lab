@@ -1,39 +1,39 @@
 #!/bin/bash
 # =============================================================================
-# ブータブルCDの作成手順 [wily:amd64:mini.iso]
+# ブータブルCDの作成手順 [xenial:amd64:mini.iso]
 # =============================================================================
   apt-get -y install syslinux mtools mbr genisoimage dvd+rw-tools
   cd ~
-  rm -rf ~/wily
-  mkdir -p ~/wily/image
-  mkdir -p ~/wily/install
-  mkdir -p ~/wily/mnt
+  rm -rf ~/xenial
+  mkdir -p ~/xenial/image
+  mkdir -p ~/xenial/install
+  mkdir -p ~/xenial/mnt
 # -----------------------------------------------------------------------------
-  cd ~/wily
-  wget                        "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/ubuntu/preseed.cfg"
-  wget -O mini-wily-amd64.iso "http://ftp.riken.jp/Linux/ubuntu/dists/wily/main/installer-amd64/current/images/netboot/mini.iso"
-  mount -o loop mini-wily-amd64.iso ~/wily/mnt
-  pushd ~/wily/mnt
-    find . -depth -print | cpio -pdm ~/wily/image/
+  cd ~/xenial
+  wget                          "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/ubuntu/preseed.cfg"
+  wget -O mini-xenial-amd64.iso "http://ftp.riken.jp/Linux/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/mini.iso"
+  mount -o loop mini-xenial-amd64.iso ~/xenial/mnt
+  pushd ~/xenial/mnt
+    find . -depth -print | cpio -pdm ~/xenial/image/
   popd
-  umount ~/wily/mnt
+  umount ~/xenial/mnt
 # -----------------------------------------------------------------------------
-  cd ~/wily/install
-  gunzip < ~/wily/image/initrd.gz | cpio -i
-  cp -p ~/wily/preseed.cfg .
-  mv ~/wily/image/initrd.gz ~/wily/image/initrd.gz.orig
-  find . | cpio -H newc --create | gzip -9 > ~/wily/image/initrd.gz
+  cd ~/xenial/install
+  gunzip < ~/xenial/image/initrd.gz | cpio -i
+  cp -p ~/xenial/preseed.cfg .
+  mv ~/xenial/image/initrd.gz ~/xenial/image/initrd.gz.orig
+  find . | cpio -H newc --create | gzip -9 > ~/xenial/image/initrd.gz
 # -----------------------------------------------------------------------------
-  cat <<- _EOT_ > ~/wily/image/syslinux.cfg
+  cat <<- _EOT_ > ~/xenial/image/syslinux.cfg
 	default vmlinuz
 	append auto=true vga=normal file=/preseed.cfg initrd=initrd.gz priority=critical console-setup/ask_detect=false pkgsel/language-pack-patterns=pkgsel/install-language-support=false quiet --
 _EOT_
 # -----------------------------------------------------------------------------
-  pushd ~/wily/image
-    genisoimage -J -r -R -o ~/wily/mini-wily-amd64-preseed.iso -b isolinux.bin -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
+  pushd ~/xenial/image
+    genisoimage -J -r -R -o ~/xenial/mini-xenial-amd64-preseed.iso -b isolinux.bin -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
   popd
 # -----------------------------------------------------------------------------
-  cd ~/wily
+  cd ~/xenial
   ls -al
 # -----------------------------------------------------------------------------
   exit 0

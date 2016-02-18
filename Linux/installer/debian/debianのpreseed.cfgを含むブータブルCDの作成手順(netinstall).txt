@@ -8,16 +8,18 @@
   mkdir -p ~/current/image
   mkdir -p ~/current/install.386
   mkdir -p ~/current/install.amd
+  mkdir -p ~/current/mnt
 # -----------------------------------------------------------------------------
   cd ~/current
-  wget "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg"
-  wget "http://cdimage.debian.org/cdimage/release/current/multi-arch/iso-cd/debian-8.3.0-amd64-i386-netinst.iso"
-  mount -o loop debian-8.3.0-amd64-i386-netinst.iso /mnt
-  pushd /mnt
-  find . -depth -print | cpio -pdm ~/current/image/
+# wget -O preseed.cfg "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lstandard"
+  wget -O preseed.cfg "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lxde"
+  wget                "http://cdimage.debian.org/cdimage/release/current/multi-arch/iso-cd/debian-8.3.0-amd64-i386-netinst.iso"
+  mount -o loop debian-8.3.0-amd64-i386-netinst.iso ~/current/mnt
+  pushd ~/current/mnt
+    find . -depth -print | cpio -pdm ~/current/image/
   popd
-  umount -f /mnt
-# -- 386 ----------------------------------------------------------------------
+  umount ~/current/mnt
+# ++ 386 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   cd ~/current/install.386
   gunzip < ~/current/image/install.386/initrd.gz | cpio -i
   cp -p ~/current/preseed.cfg .
@@ -26,9 +28,9 @@
 # -----------------------------------------------------------------------------
   cat <<- _EOT_ > ~/current/image/install.386/syslinux.cfg
 	default vmlinuz
-	append auto=true vga=normal file=/preseed.cfg initrd=initrd.gz priority=critical console-setup/ask_detect=false pkgsel/language-pack-patterns= pkgsel/install-language-support=false quiet --
+	append auto=true vga=normal file=/preseed.cfg initrd=initrd.gz priority=critical console-setup/ask_detect=false pkgsel/language-pack-patterns=pkgsel/install-language-support=false quiet --
 _EOT_
-# -- amd ----------------------------------------------------------------------
+# ++ amd ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   cd ~/current/install.amd
   gunzip < ~/current/image/install.amd/initrd.gz | cpio -i
   cp -p ~/current/preseed.cfg .
@@ -37,10 +39,15 @@ _EOT_
 # -----------------------------------------------------------------------------
   cat <<- _EOT_ > ~/current/image/install.amd/syslinux.cfg
 	default vmlinuz
-	append auto=true vga=normal file=/preseed.cfg initrd=initrd.gz priority=critical console-setup/ask_detect=false pkgsel/language-pack-patterns= pkgsel/install-language-support=false quiet --
+	append auto=true vga=normal file=/preseed.cfg initrd=initrd.gz priority=critical console-setup/ask_detect=false pkgsel/language-pack-patterns=pkgsel/install-language-support=false quiet --
 _EOT_
 # -----------------------------------------------------------------------------
-  cd ~/current/image
-  genisoimage -J -r -R -o ~/current/debian-8.3.0-amd64-i386-netinst-preseed.iso -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
-  cd ~
+  pushd ~/current/image
+    genisoimage -J -r -R -o ~/current/debian-8.3.0-amd64-i386-netinst-preseed.iso -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
+  popd
+# -----------------------------------------------------------------------------
+  cd ~/current
+  ls -al
+# -----------------------------------------------------------------------------
+  exit 0
 # = eof =======================================================================

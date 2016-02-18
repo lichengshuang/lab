@@ -1,11 +1,12 @@
 # *****************************************************************************
-# Contents of the preconfiguration file (for jessie) : x86/amd64
+# Contents of the preconfiguration file (for debian) : x86/amd64 [standard]
 # *****************************************************************************
 # d-i debconf/priority select high
 # == Localization =============================================================
   d-i debian-installer/locale string ja_JP.UTF-8
   d-i debian-installer/language string ja
   d-i debian-installer/country string JP
+  d-i localechooser/languagelist select ja
 # d-i localechooser/supported-locales en_US.UTF-8, nl_NL.UTF-8
 # -- Keyboard selection. ------------------------------------------------------
 # d-i keymap string jp
@@ -38,7 +39,7 @@
 # d-i netcfg/get_nameservers string fc00::1
 # d-i netcfg/confirm_static boolean true
 # -- Host name and Domain name ------------------------------------------------
-  d-i netcfg/get_hostname string sv-server
+  d-i netcfg/get_hostname string sv-debian
   d-i netcfg/get_domain string workgroup
 # d-i netcfg/hostname string somehost
 # -- Disable that annoying WEP key dialog. ------------------------------------
@@ -92,8 +93,8 @@
 # d-i partman-auto/init_automatically_partition select biggest_free
 # -----------------------------------------------------------------------------
 # d-i partman-auto/disk string /dev/sda
-  d-i partman-auto/disk string /dev/sda /dev/sdb
-# d-i partman-auto/disk string /dev/sda /dev/sdb /dev/sdc /dev/sdd
+# d-i partman-auto/disk string /dev/sda /dev/sdb
+  d-i partman-auto/disk string /dev/sda /dev/sdb /dev/sdc /dev/sdd
 # -----------------------------------------------------------------------------
 # d-i partman-auto/method string regular
 # d-i partman-auto/method string lvm
@@ -111,9 +112,9 @@
 # -----------------------------------------------------------------------------
 # d-i partman-auto/expert_recipe_file string /hd-media/recipe
 # -- Partitioning using RAID --------------------------------------------------
-#   /      : 5120MB : ext4 : /dev/sda1 : raid1 : /dev/sd[a  ]1
-#   swap   : 1024MB : swap : /dev/sda5 : raid1 : /dev/sd[a  ]5
-#   /share :  ~ end : ext4 : /dev/sda6 : raid1 : /dev/sd[a  ]6
+#   /      : 5120MB : ext4 : /dev/sda1 : raid5 : /dev/sd[a  ]1
+#   swap   : 1024MB : swap : /dev/sda5 : raid5 : /dev/sd[a  ]5
+#   /share :  ~ end : ext4 : /dev/sda6 : raid5 : /dev/sd[a  ]6
 # d-i partman-auto/expert_recipe string \
 #   boot-root :: \
 #      5120 1  5120 ext4 $primary{ } $bootable{ } method{ format } format{ } use_filesystem{ } filesystem{ ext4 } mountpoint{ /      } . \
@@ -125,9 +126,9 @@
        1024 2  300% raid $logical{ }              method{ raid } format{ } . \
       10240 3    -1 raid $logical{ }              method{ raid } format{ } .
   d-i partman-auto-raid/recipe string \
-    1 2 0 ext4 /      /dev/sda1#/dev/sdb1 . \
-    1 2 0 swap -      /dev/sda5#/dev/sdb5 . \
-    1 2 0 ext4 /share /dev/sda6#/dev/sdb6 .
+    5 4 0 ext4 /      /dev/sda1#/dev/sdb1#/dev/sdc1#/dev/sdd1 . \
+    5 4 0 swap -      /dev/sda5#/dev/sdb5#/dev/sdc5#/dev/sdd5 . \
+    5 4 0 ext4 /share /dev/sda6#/dev/sdb6#/dev/sdc6#/dev/sdd6 .
   d-i partman-md/confirm boolean true
 # -- This makes partman automatically partition without confirmation. ---------
   d-i partman-partitioning/confirm_write_new_label boolean true
@@ -155,8 +156,9 @@
 # == Package selection ========================================================
 # tasksel tasksel/first multiselect standard, web-server
 # tasksel tasksel/desktop multiselect kde, xfce
-  tasksel tasksel/first multiselect standard
-  d-i pkgsel/include string openssh-server
+  tasksel tasksel/first multiselect standard, ssh-server
+# tasksel tasksel/first multiselect standard, ssh-server, desktop, lxde-desktop
+# d-i pkgsel/include string openssh-server
 # -- Individual additional packages to install --------------------------------
   d-i pkgsel/upgrade select none
 # -----------------------------------------------------------------------------
@@ -170,8 +172,8 @@
 # d-i grub-installer/with_other_os boolean false
 # d-i grub-installer/bootdev string (hd0,0)
 # d-i grub-installer/bootdev string (hd0,0) (hd1,0) (hd2,0)
-# d-i grub-installer/bootdev string /dev/sda
-  d-i grub-installer/bootdev string /dev/sda /dev/sdb
+  d-i grub-installer/bootdev string /dev/sda
+# d-i grub-installer/bootdev string /dev/sda /dev/sdb
 # d-i grub-installer/bootdev string /dev/sda /dev/sdb /dev/sdc /dev/sdd
 # d-i grub-installer/password password r00tme
 # d-i grub-installer/password-again password r00tme

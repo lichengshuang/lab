@@ -1,11 +1,12 @@
 # *****************************************************************************
-# Contents of the preconfiguration file (for jessie) : x86/amd64
+# Contents of the preconfiguration file (for debian) : x86/amd64 [standard]
 # *****************************************************************************
 # d-i debconf/priority select high
 # == Localization =============================================================
   d-i debian-installer/locale string ja_JP.UTF-8
   d-i debian-installer/language string ja
   d-i debian-installer/country string JP
+  d-i localechooser/languagelist select ja
 # d-i localechooser/supported-locales en_US.UTF-8, nl_NL.UTF-8
 # -- Keyboard selection. ------------------------------------------------------
 # d-i keymap string jp
@@ -38,7 +39,7 @@
 # d-i netcfg/get_nameservers string fc00::1
 # d-i netcfg/confirm_static boolean true
 # -- Host name and Domain name ------------------------------------------------
-  d-i netcfg/get_hostname string sv-server
+  d-i netcfg/get_hostname string sv-debian
   d-i netcfg/get_domain string workgroup
 # d-i netcfg/hostname string somehost
 # -- Disable that annoying WEP key dialog. ------------------------------------
@@ -91,14 +92,14 @@
 # == Partitioning =============================================================
 # d-i partman-auto/init_automatically_partition select biggest_free
 # -----------------------------------------------------------------------------
-  d-i partman-auto/disk string /dev/sda
-# d-i partman-auto/disk string /dev/sda /dev/sdb
+# d-i partman-auto/disk string /dev/sda
+  d-i partman-auto/disk string /dev/sda /dev/sdb
 # d-i partman-auto/disk string /dev/sda /dev/sdb /dev/sdc /dev/sdd
 # -----------------------------------------------------------------------------
-  d-i partman-auto/method string regular
+# d-i partman-auto/method string regular
 # d-i partman-auto/method string lvm
 # d-i partman-auto/method string crypto
-# d-i partman-auto/method string raid
+  d-i partman-auto/method string raid
 # -----------------------------------------------------------------------------
   d-i partman-lvm/device_remove_lvm boolean true
   d-i partman-md/device_remove_md boolean true
@@ -111,24 +112,24 @@
 # -----------------------------------------------------------------------------
 # d-i partman-auto/expert_recipe_file string /hd-media/recipe
 # -- Partitioning using RAID --------------------------------------------------
-#   /      : 5120MB : ext4 : /dev/sda1 : ext4  : /dev/sd[a  ]1
-#   swap   : 1024MB : swap : /dev/sda5 : swap  : /dev/sd[a  ]5
-#   /share :  ~ end : ext4 : /dev/sda6 : ext4  : /dev/sd[a  ]6
-  d-i partman-auto/expert_recipe string \
-    boot-root :: \
-       5120 1  5120 ext4 $primary{ } $bootable{ } method{ format } format{ } use_filesystem{ } filesystem{ ext4 } mountpoint{ /      } . \
-       1024 2  300% swap $logical{ }              method{ swap   } format{ }                                                           . \
-      10240 3    -1 ext4 $logical{ }              method{ format } format{ } use_filesystem{ } filesystem{ ext4 } mountpoint{ /share } .
+#   /      : 5120MB : ext4 : /dev/sda1 : raid1 : /dev/sd[a  ]1
+#   swap   : 1024MB : swap : /dev/sda5 : raid1 : /dev/sd[a  ]5
+#   /share :  ~ end : ext4 : /dev/sda6 : raid1 : /dev/sd[a  ]6
 # d-i partman-auto/expert_recipe string \
-#   multiraid :: \
-#      5120 1  5120 raid $primary{ } $bootable{ } method{ raid } format{ } . \
-#      1024 2  300% raid $logical{ }              method{ raid } format{ } . \
-#     10240 3    -1 raid $logical{ }              method{ raid } format{ } .
-# d-i partman-auto-raid/recipe string \
-#   1 2 0 ext4 /      /dev/sda1#/dev/sdb1 . \
-#   1 2 0 swap -      /dev/sda5#/dev/sdb5 . \
-#   1 2 0 ext4 /share /dev/sda6#/dev/sdb6 .
-# d-i partman-md/confirm boolean true
+#   boot-root :: \
+#      5120 1  5120 ext4 $primary{ } $bootable{ } method{ format } format{ } use_filesystem{ } filesystem{ ext4 } mountpoint{ /      } . \
+#      1024 2  300% swap $logical{ }              method{ swap   } format{ }                                                           . \
+#     10240 3    -1 ext4 $logical{ }              method{ format } format{ } use_filesystem{ } filesystem{ ext4 } mountpoint{ /share } .
+  d-i partman-auto/expert_recipe string \
+    multiraid :: \
+       5120 1  5120 raid $primary{ } $bootable{ } method{ raid } format{ } . \
+       1024 2  300% raid $logical{ }              method{ raid } format{ } . \
+      10240 3    -1 raid $logical{ }              method{ raid } format{ } .
+  d-i partman-auto-raid/recipe string \
+    1 2 0 ext4 /      /dev/sda1#/dev/sdb1 . \
+    1 2 0 swap -      /dev/sda5#/dev/sdb5 . \
+    1 2 0 ext4 /share /dev/sda6#/dev/sdb6 .
+  d-i partman-md/confirm boolean true
 # -- This makes partman automatically partition without confirmation. ---------
   d-i partman-partitioning/confirm_write_new_label boolean true
   d-i partman/choose_partition select finish
@@ -155,8 +156,9 @@
 # == Package selection ========================================================
 # tasksel tasksel/first multiselect standard, web-server
 # tasksel tasksel/desktop multiselect kde, xfce
-  tasksel tasksel/first multiselect standard
-  d-i pkgsel/include string openssh-server
+  tasksel tasksel/first multiselect standard, ssh-server
+# tasksel tasksel/first multiselect standard, ssh-server, desktop, lxde-desktop
+# d-i pkgsel/include string openssh-server
 # -- Individual additional packages to install --------------------------------
   d-i pkgsel/upgrade select none
 # -----------------------------------------------------------------------------

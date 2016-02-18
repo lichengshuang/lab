@@ -1,40 +1,40 @@
 #!/bin/bash
 # =============================================================================
-# ブータブルCDの作成手順 [stable:amd64:mini.iso]
+# ブータブルCDの作成手順 [oldstable:amd64:mini.iso]
 # =============================================================================
   apt-get -y install syslinux mtools mbr genisoimage dvd+rw-tools
   cd ~
-  rm -rf ~/stable
-  mkdir -p ~/stable/image
-  mkdir -p ~/stable/install
-  mkdir -p ~/stable/mnt
+  rm -rf ~/oldstable
+  mkdir -p ~/oldstable/image
+  mkdir -p ~/oldstable/install
+  mkdir -p ~/oldstable/mnt
 # -----------------------------------------------------------------------------
-  cd ~/stable
+  cd ~/oldstable
 # wget -O preseed.cfg              "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lstandard"
   wget -O preseed.cfg              "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lxde"
-  wget -O mini-stable-amd64.iso    "http://ftp.jp.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/mini.iso"
-  mount -o loop mini-stable-amd64.iso ~/stable/mnt
-  pushd ~/stable/mnt
-    find . -depth -print | cpio -pdm ~/stable/image/
+  wget -O mini-oldstable-amd64.iso "http://ftp.jp.debian.org/debian/dists/oldstable/main/installer-amd64/current/images/netboot/mini.iso"
+  mount -o loop mini-oldstable-amd64.iso ~/oldstable/mnt
+  pushd ~/oldstable/mnt
+    find . -depth -print | cpio -pdm ~/oldstable/image/
   popd
-  umount ~/stable/mnt
+  umount ~/oldstable/mnt
 # -----------------------------------------------------------------------------
-  cd ~/stable/install
-  gunzip < ~/stable/image/initrd.gz | cpio -i
-  cp -p ~/stable/preseed.cfg .
-  mv ~/stable/image/initrd.gz ~/stable/image/initrd.gz.orig
-  find . | cpio -H newc --create | gzip -9 > ~/stable/image/initrd.gz
+  cd ~/oldstable/install
+  gunzip < ~/oldstable/image/initrd.gz | cpio -i
+  cp -p ~/oldstable/preseed.cfg .
+  mv ~/oldstable/image/initrd.gz ~/oldstable/image/initrd.gz.orig
+  find . | cpio -H newc --create | gzip -9 > ~/oldstable/image/initrd.gz
 # -----------------------------------------------------------------------------
-  cat <<- _EOT_ > ~/stable/image/syslinux.cfg
+  cat <<- _EOT_ > ~/oldstable/image/syslinux.cfg
 	default vmlinuz
 	append auto=true vga=normal file=/preseed.cfg initrd=initrd.gz priority=critical console-setup/ask_detect=false pkgsel/language-pack-patterns=pkgsel/install-language-support=false quiet --
 _EOT_
 # -----------------------------------------------------------------------------
-  pushd ~/stable/image
-    genisoimage -J -r -R -o ~/stable/mini-stable-amd64-preseed.iso -b isolinux.bin -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
+  pushd ~/oldstable/image
+    genisoimage -J -r -R -o ~/oldstable/mini-oldstable-amd64-preseed.iso -b isolinux.bin -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
   popd
 # -----------------------------------------------------------------------------
-  cd ~/stable
+  cd ~/oldstable
   ls -al
 # -----------------------------------------------------------------------------
   exit 0

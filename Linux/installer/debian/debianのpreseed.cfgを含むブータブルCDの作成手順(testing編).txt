@@ -7,15 +7,17 @@
   rm -rf ~/testing
   mkdir -p ~/testing/image
   mkdir -p ~/testing/install
+  mkdir -p ~/testing/mnt
 # -----------------------------------------------------------------------------
   cd ~/testing
-  wget "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg"
-  wget "http://ftp.jp.debian.org/debian/dists/testing/main/installer-amd64/current/images/netboot/mini.iso"
-  mount -o loop mini.iso /mnt
-  pushd /mnt
-  find . -depth -print | cpio -pdm ~/testing/image/
+# wget -O preseed.cfg              "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lstandard"
+  wget -O preseed.cfg              "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lxde"
+  wget -O mini-testing-amd64.iso   "http://ftp.jp.debian.org/debian/dists/testing/main/installer-amd64/current/images/netboot/mini.iso"
+  mount -o loop mini-testing-amd64.iso ~/testing/mnt
+  pushd ~/testing/mnt
+    find . -depth -print | cpio -pdm ~/testing/image/
   popd
-  umount -f /mnt
+  umount ~/testing/mnt
 # -----------------------------------------------------------------------------
   cd ~/testing/install
   gunzip < ~/testing/image/initrd.gz | cpio -i
@@ -25,10 +27,15 @@
 # -----------------------------------------------------------------------------
   cat <<- _EOT_ > ~/testing/image/syslinux.cfg
 	default vmlinuz
-	append auto=true vga=normal file=/preseed.cfg initrd=initrd.gz priority=critical console-setup/ask_detect=false pkgsel/language-pack-patterns= pkgsel/install-language-support=false quiet --
+	append auto=true vga=normal file=/preseed.cfg initrd=initrd.gz priority=critical console-setup/ask_detect=false pkgsel/language-pack-patterns=pkgsel/install-language-support=false quiet --
 _EOT_
 # -----------------------------------------------------------------------------
-  cd ~/testing/image
-  genisoimage -J -r -R -o ~/testing/mini-amd64-preseed.iso -b isolinux.bin -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
-  cd ~
+  pushd ~/testing/image
+    genisoimage -J -r -R -o ~/testing/mini-testing-amd64-preseed.iso -b isolinux.bin -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table .
+  popd
+# -----------------------------------------------------------------------------
+  cd ~/testing
+  ls -al
+# -----------------------------------------------------------------------------
+  exit 0
 # = eof =======================================================================
