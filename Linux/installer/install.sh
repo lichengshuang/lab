@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 ##
-##	ファイル名	:	install_vmware.sh
+##	ファイル名	:	install.sh
 ##
 ##	機能概要	:	Debian & Ubuntu Install用シェル [VMware対応]
 ##
@@ -53,6 +53,9 @@
 ##	2016/02/11 000.0000 J.Itou         処理見直し(ユーザー登録ファイル見直し)
 ##	2016/02/12 000.0000 J.Itou         処理見直し(debian版とubuntu版、各vnware版の統合)
 ##	2016/02/17 000.0000 J.Itou         処理見直し(apt-get installの一括処理)
+##	2016/02/25 000.0000 J.Itou         処理見直し(sed見直し)
+##	2016/03/03 000.0000 J.Itou         処理見直し(色々と見直し)
+##	2016/03/14 000.0000 J.Itou         処理見直し(色々と見直し)
 ##	YYYY/MM/DD 000.0000 xxxxxxxxxxxxxx 
 ###############################################################################
 #set -nvx
@@ -90,7 +93,7 @@ funcPause() {
 	FLG_AUTO=1									# 0以外でpreseed.cfgの環境を使う
 	FLG_VIEW=0									# 0以外でデバッグ用に設定ファイルを開く
 	FLG_SVER=1									# 0以外でサーバー仕様でセッティング
-#	VER_WMIN=1.780								# webminの最新バージョンを登録
+#	VER_WMIN=1.791								# webminの最新バージョンを登録
 #	VGA_MODE="vga=792"							# コンソールの解像度：1024×768：1600万色
 #	VGA_RESO=1024x768							#   〃              ：
 	VGA_MODE="vga=795"							#   〃              ：1280×1024：1600万色
@@ -109,7 +112,7 @@ funcPause() {
 		fi
 	fi
 
-	if [ `echo ${PGM_NAME} | grep vmware` = "" ]; then
+	if [ "`echo ${PGM_NAME} | grep -i vmware`" = "" ]; then
 		FLG_VMTL=0								# 0以外でVMware Toolsをインストール
 	else
 		FLG_VMTL=1								# 0以外でVMware Toolsをインストール
@@ -128,7 +131,6 @@ funcPause() {
 			squeeze      ) SET_DIST="${TARGET}"; break ;;	# debian 6
 			wheezy       ) SET_DIST="${TARGET}"; break ;;	# debian 7
 			jessie       ) SET_DIST="${TARGET}"; break ;;	# debian 8
-			stretch      ) SET_DIST="${TARGET}"; break ;;	# debian 9
 			stretch      ) SET_DIST="${TARGET}"; break ;;	# debian 9
 			lucid        ) SET_DIST="${TARGET}"; break ;;	# ubuntu 10.04
 			precise      ) SET_DIST="${TARGET}"; break ;;	# ubuntu 12.04
@@ -224,15 +226,15 @@ funcPause() {
 # Make work dir
 #------------------------------------------------------------------------------
 	mkdir -p ${DIR_WK}
-#	chmod 700 ${DIR_WK}
+	chmod 700 ${DIR_WK}
 	pushd ${DIR_WK}
 
 #------------------------------------------------------------------------------
 # System Update
 #------------------------------------------------------------------------------
 	if [ ! -f /etc/apt/sources.list.orig ]; then
-		cp -p /etc/apt/sources.list /etc/apt/sources.list.orig
-		sed "s/^deb/# deb/" < /etc/apt/sources.list.orig > /etc/apt/sources.list
+		sed -i.orig /etc/apt/sources.list \
+			-e 's/^deb/# deb/'
 
 		case "${DST_NAME}" in
 			debian )
@@ -295,7 +297,7 @@ _EOT_
 						ssh \
 						apache2 \
 						proftpd \
-						samba samba-doc smbclient \
+						samba smbclient \
 						rsync \
 						fdclone \
 						gufw \
@@ -308,7 +310,7 @@ _EOT_
 	funcPause $?
 #
 #------------------------------------------------------------------------------
-# Make User file
+# Make User file (${DIR_WK}/addusers.txtが有ればそれを使う)
 #------------------------------------------------------------------------------
 	rm -f ${USR_FILE}
 	rm -f ${SMB_FILE}
@@ -359,9 +361,19 @@ _EOT_
 #		funcPause $?
 #		dpkg-reconfigure locales
 #		funcPause $?
-		locale-gen
+#		locale-gen
+#		funcPause $?
+#		update-locale LANG=ja_JP.UTF-8
+#		funcPause $?
+		timedatectl set-timezone "Asia/Tokyo"
 		funcPause $?
-		update-locale LANG=ja_JP.UTF-8
+		localectl set-locale LANG="ja_JP.utf8" LANGUAGE="ja:en"
+		funcPause $?
+		localectl set-x11-keymap "jp" "jp106" "" "terminate:ctrl_alt_bksp"
+		funcPause $?
+		locale | sed -e 's/LANG=C/LANG=ja_JP.UTF-8/' \
+					 -e 's/LANGUAGE=$/LANGUAGE=ja:en/' \
+					 -e 's/"C"/"ja_JP.UTF-8"/' > /etc/locale.conf
 		funcPause $?
 		#----------------------------------------------------------------------
 		cp -p ~/.bashrc ~/.bashrc.orig
@@ -493,13 +505,14 @@ _EOT_
 #------------------------------------------------------------------------------
 	cat <<- _EOT_ > ${SMB_WORK}
 		# Samba config file created using SWAT
-		# from UNKNOWN (${SVR_IPAD}.${SVR_ADDR})
+		# from ${SVR_NAME} (${SVR_IPAD}.${SVR_ADDR})
 		# Date: `date +"%Y/%m/%d/ %H:%M:%S"`
 
 		[global]
 		 	dos charset = CP932
 		 	workgroup = ${WGP_NAME}
 		 	server string = Samba Server
+		 	map to guest = Bad User
 		 	obey pam restrictions = Yes
 		 	pam password change = Yes
 		 	passwd program = /usr/bin/passwd %u
@@ -512,32 +525,25 @@ _EOT_
 		 	syslog = 0
 		 	log file = /var/log/samba/log.%m
 		 	max log size = 1000
-		 	unix extensions = No
-		 	load printers = No
-		 	disable spoolss = Yes
 		 	logon script = logon.bat
 		 	logon drive = U:
 		 	domain logons = Yes
 		 	dns proxy = No
 		 	usershare allow guests = Yes
 		 	panic action = /usr/share/samba/panic-action %d
-		 	idmap config * : range =
 		 	idmap config * : backend = tdb
-		 	username = ${SMB_USER}
-		 	valid users = @${SMB_GRUP}
-		 	create mask = 0644
+		 	force user = ${SMB_USER}
+		 	force group = ${SMB_GRUP}
+		 	create mask = 0770
 		 	force create mode = 0770
+		 	directory mask = 0770
 		 	force directory mode = 0770
 		 	hosts allow = 127., ${SVR_IPAD}.
 		 	hosts deny = ALL
-		 	wide links = Yes
 
 		[homes]
 		 	comment = Home Directories
-		 	username =
 		 	valid users = %S
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	browseable = No
 
 		[printers]
@@ -553,30 +559,19 @@ _EOT_
 		 	path = /var/lib/samba/printers
 		 	browseable = No
 
-		[sambadoc]
-		 	comment = Samba Documents
-		 	path = /usr/share/doc/samba-doc/htmldocs
-		 	browseable = No
-
 		[netlogon]
 		 	comment = Network Logon Service
 		 	path = /share/data/adm/netlogon
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 
 		[profiles]
 		 	comment = Users profiles
 		 	path = /share/data/adm/profiles
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[cdrom]
 		 	comment = Samba server's CD-ROM
 		 	path = /mnt/cdrom
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 		 	locking = No
@@ -586,69 +581,51 @@ _EOT_
 		[share]
 		 	comment = Shared directories
 		 	path = /share
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	browseable = No
 
 		[data]
 		 	comment = Data directories
 		 	path = /share/data
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[usb]
 		 	comment = USB devices directories
 		 	path = /share/usb
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[wizd]
 		 	comment = Wizd directories
 		 	path = /share/wizd
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[pub]
 		 	comment = Public directories
 		 	path = /share/data/pub
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 
 		[web]
 		 	comment = User Directries (web files)
 		 	path = /share/data/usr/%U/web
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[app]
 		 	comment = User Directries (applications)
 		 	path = /share/data/usr/%U/app
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[dat]
 		 	comment = User Directries (data files)
 		 	path = /share/data/usr/%U/dat
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 
 		[usb1]
 		 	comment = Samba server's USB1
 		 	path = /mnt/usb1
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 		 	locking = No
@@ -658,8 +635,6 @@ _EOT_
 		[usb2]
 		 	comment = Samba server's USB2
 		 	path = /mnt/usb2
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 		 	locking = No
@@ -669,8 +644,6 @@ _EOT_
 		[usb3]
 		 	comment = Samba server's USB3
 		 	path = /mnt/usb3
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 		 	locking = No
@@ -680,8 +653,6 @@ _EOT_
 		[usb4]
 		 	comment = Samba server's USB4
 		 	path = /mnt/usb4
-		 	force user = ${SMB_USER}
-		 	force group = ${SMB_GRUP}
 		 	read only = No
 		 	browseable = No
 		 	locking = No
@@ -860,22 +831,26 @@ _EOT_
 #	${CMD_AGET} install clamav
 #	funcPause $?
 #
-#	if [ ! -f /etc/clamav/freshclam.conf.orig ]; then
-#		cp -p /etc/clamav/freshclam.conf /etc/clamav/freshclam.conf.orig
-#
-#		sed "s/Checks\ 24/Checks\ 12/" < /etc/clamav/freshclam.conf.orig > /etc/clamav/freshclam.conf
-#
-#		if [ ${FLG_VIEW} -ne 0 ]; then
-#			vi /etc/clamav/freshclam.conf
-#		fi
-#	fi
-#
-#	freshclam -d
-#	service clamav-freshclam stop
+	if [ ! -f /etc/clamav/freshclam.conf.orig ]; then
+		sed -i.orig /etc/clamav/freshclam.conf \
+			-e 's/# Check for new database 24 times a day/# Check for new database 4 times a day/' \
+			-e 's/Checks 24/Checks 4/' \
+			-e 's/^NotifyClamd/#&/'
+
+		if [ ${FLG_VIEW} -ne 0 ]; then
+			vi /etc/clamav/freshclam.conf
+		fi
+	fi
 
 	/etc/init.d/clamav-freshclam stop
-	update-rc.d clamav-freshclam disable
-	service --status-all | grep clamav-freshclam
+	freshclam -d
+	freshclam
+	/etc/init.d/clamav-freshclam start
+
+#	service clamav-freshclam stop
+#	/etc/init.d/clamav-freshclam stop
+#	update-rc.d clamav-freshclam disable
+#	service --status-all | grep clamav-freshclam
 
 #------------------------------------------------------------------------------
 # Install ntpdate
@@ -890,10 +865,9 @@ _EOT_
 #	funcPause $?
 	#---------------------------------------------------------------------------
 	if [ ! -f /etc/ssh/sshd_config.orig ]; then
-		cp -p /etc/ssh/sshd_config /etc/ssh/sshd_config.orig
-		cat <<- _EOT_ >> /etc/ssh/sshd_config
-			UseDNS no
-_EOT_
+		sed -i.orig /etc/ssh/sshd_config \
+			-e '$a UseDNS no'
+
 		if [ ${FLG_VIEW} -ne 0 ]; then
 			vi /etc/ssh/sshd_config
 		fi
@@ -957,11 +931,9 @@ _EOT_
 	fi
 	#--------------------------------------------------------------------------
 	if [ ! -f /etc/ftpusers.orig ]; then
-		cp -p /etc/ftpusers /etc/ftpusers.orig
-		cat <<- _EOT_ >> /etc/ftpusers
-			master
-_EOT_
-		sed 's/root/#\ root/' < /etc/ftpusers.orig > /etc/ftpusers
+		sed -i.orig /etc/ftpusers \
+			-e 's/root/# &/' \
+			-e '$a master'
 
 		if [ ${FLG_VIEW} -ne 0 ]; then
 			vi /etc/ftpusers
@@ -1260,7 +1232,7 @@ _EOT_
 	fi
 
 	if [ ${FLG_DHCP} -ne 0 ]; then
-		insserv -d isc-dhcp-server
+#		insserv -d isc-dhcp-server
 		/etc/init.d/isc-dhcp-server start
 	else
 		/etc/init.d/isc-dhcp-server stop
@@ -1531,10 +1503,10 @@ _EOT_
 		# @reboot /sbin/sysctl -p
 		0 0,3,6,9,12,15,18,21 * * * /usr/sbin/ntpdate -s ntp.nict.jp
 		# @reboot /usr/sh/CMDMOUNT.sh
-		@reboot /usr/sh/CMDBACKUP.sh
+		# @reboot /usr/sh/CMDBACKUP.sh
 		# 0 1 * * * /usr/sh/CMDUPDATE.sh
-		0 2 * * * /usr/sh/CMDFRESHCLAM.sh
-		0 3 * * * /usr/sh/CMDRSYNC.sh
+		# 0 2 * * * /usr/sh/CMDFRESHCLAM.sh
+		# 0 3 * * * /usr/sh/CMDRSYNC.sh
 _EOT_
 
 	crontab ${CRN_FILE}
@@ -1543,13 +1515,9 @@ _EOT_
 # GRUB
 #------------------------------------------------------------------------------
 	if [ ! -f /etc/default/grub.orig ]; then
-		cp -p /etc/default/grub /etc/default/grub.orig
-
-#		sed "s/GRUB_CMDLINE_LINUX=\"\"/GRUB_CMDLINE_LINUX=\"${VGA_MODE}\"/" < /etc/default/grub.orig > /etc/default/grub.temp
-#		sed "s/#GRUB_GFXMODE=640x480/GRUB_GFXMODE=${VGA_RESO}/" < /etc/default/grub.temp > /etc/default/grub
-#		rm /etc/default/grub.temp
-
-		sed "s/#GRUB_GFXMODE=640x480/GRUB_GFXPAYLOAD_LINUX=${VGA_RESO}\nGRUB_GFXMODE=${VGA_RESO}/" < /etc/default/grub.orig > /etc/default/grub
+		sed -i.orig /etc/default/grub \
+			-e 's/^GRUB_CMDLINE_LINUX_DEFAULT/#&/' \
+			-e "s/#GRUB_GFXMODE=640x480/GRUB_GFXPAYLOAD_LINUX=${VGA_RESO}\nGRUB_GFXMODE=${VGA_RESO}/"
 
 		if [ ${FLG_VIEW} -ne 0 ]; then
 			vi /etc/default/grub
@@ -1563,7 +1531,6 @@ _EOT_
 #------------------------------------------------------------------------------
 	if [ ! -f /etc/sysctl.conf.orig ]; then
 		cp -p /etc/sysctl.conf /etc/sysctl.conf.orig
-
 		cat <<- _EOT_ >> /etc/sysctl.conf
 			# -----------------------------------------------------------------------------
 			# Disable IPv6

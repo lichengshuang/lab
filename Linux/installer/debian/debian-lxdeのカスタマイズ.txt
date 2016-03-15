@@ -1,0 +1,119 @@
+# *****************************************************************************
+# LiveCDCustomization                                                         *
+# *****************************************************************************
+
+# == 必須ツールのインストール =================================================
+  apt-get -y install squashfs-tools genisoimage
+
+# == 基本システムの展開 =======================================================
+  cd ~
+  rm -Rf ~/debian
+  mkdir -p ~/debian
+  mkdir -p ~/debian/mnt
+  mkdir -p ~/debian/extract-cd
+  cd ~/debian
+  mount -o loop "/mnt/hgfs/Share/My Documents/Download/Linux/iso/Debian 8/debian-live-8.3.0-amd64-lxde-desktop.iso" mnt
+    rm -Rf extract-cd
+    rsync --exclude=/live/filesystem.squashfs -a mnt/ extract-cd
+    rm -Rf edit squashfs-root
+    unsquashfs -no-progress mnt/live/filesystem.squashfs
+    mv squashfs-root edit
+  umount mnt
+
+# == 基本システムの設定 =======================================================
+  /etc/init.d/webmin stop
+  ps -Af | grep -i webmin
+  cd ~/debian
+  LANG=C chroot edit /bin/bash
+    mount -t proc     proc     /proc
+    mount -t sysfs    sysfs    /sys
+    mount -t devtmpfs /dev     /dev
+    mount -t devpts   /dev/pts /dev/pts
+    /etc/init.d/dbus start
+
+# -- ロケールの設定 -----------------------------------------------------------
+#   timedatectl set-timezone "Asia/Tokyo"
+#   dpkg-reconfigure tzdata
+#   dpkg-reconfigure locales
+    rm -f /etc/localtime
+    ln -s /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
+    sed -i /etc/locale.gen \
+        -e 's/\(^[^#]\)/# \1/' \
+        -e 's/# ja_JP.UTF-8 UTF-8/ja_JP.UTF-8 UTF-8/'
+    locale-gen
+    localectl set-locale LANG="ja_JP.utf8" LANGUAGE="ja:en"
+    localectl set-x11-keymap "jp" "jp106" "" "terminate:ctrl_alt_bksp"
+    locale | sed -e 's/LANG=C/LANG=ja_JP.UTF-8/' -e 's/LANGUAGE=$/LANGUAGE=ja:en/' -e 's/"C"/"ja_JP.UTF-8"/' > /etc/locale.conf
+
+# -- モジュールの追加 ---------------------------------------------------------
+    apt-get update && \
+    apt-get -y upgrade && \
+    apt-get -y dist-upgrade && \
+    apt-get -y autoremove && \
+    apt-get -y install locales \
+                       build-essential kernel-package libncurses5-dev fuse uuid-runtime \
+                       clamav \
+                       ntpdate \
+                       ssh \
+                       apache2 \
+                       proftpd \
+                       samba samba-doc smbclient \
+                       rsync \
+                       fdclone \
+                       gufw \
+                       mrtg hddtemp \
+                       bind9 \
+                       isc-dhcp-server \
+                       perl libnet-ssleay-perl openssl libauthen-pam-perl libpam-runtime libio-pty-perl apt-show-versions python \
+                       linux-headers-`uname -r` \
+                       anthy anthy-common \
+                       fonts-ipafont fonts-ipafont-gothic fonts-ipafont-mincho fonts-vlgothic \
+                       iceweasel-l10n-ja \
+                       libreoffice-help-ja libreoffice-l10n-ja \
+                       manpages-ja manpages-ja-dev \
+                       task-japanese task-japanese-desktop \
+                       ibus-mozc
+    freshclam -d
+    freshclam
+    sed -i /etc/ssh/sshd_config \
+        -e 's/^PermitRootLogin without-password/#&\nPermitRootLogin yes/' \
+        -e 's/#PasswordAuthentication yes/PasswordAuthentication yes/' \
+        -e '/HostKey \/etc\/ssh\/ssh_host_ecdsa_key/d' \
+        -e '/HostKey \/etc\/ssh\/ssh_host_ed25519_key/d' \
+        -e '$a UseDNS no\nIgnoreUserKnownHosts no'
+    sed -i /etc/proftpd/proftpd.conf \
+        -e '$a "TimesGMT off\n<Global>\n\tRootLogin on\n\tUseFtpUsers on\n</Global>"'
+    sed -i /etc/ftpusers \
+        -e "s/root/# root/"
+    wget "http://www.webmin.com/download/deb/webmin-current.deb"
+    dpkg -i webmin-current.deb
+    rm -f webmin-current.deb
+    echo -e "webprefix=\nlang_root=ja_JP.UTF-8" >> /etc/webmin/config
+
+# -- クリーニング処理 ---------------------------------------------------------
+    apt-get -y autoremove
+    apt-get autoclean
+    apt-get clean
+    /etc/init.d/dbus stop
+    umount /dev/pts || umount -lf /dev/pts
+    umount /dev     || umount -lf /dev
+    umount /sys     || umount -lf /sys
+    umount /proc    || umount -lf /proc
+  exit
+  rm -rf edit/tmp/* edit/root/.bash_history edit/root/.viminfo edit/var/cache/apt/*.bin edit/var/cache/apt/archives/*.deb
+
+# == CDイメージの作成 =========================================================
+# -- 圧縮ファイルの作成 -------------------------------------------------------
+  rm -f extract-cd/live/filesystem.squashfs
+  mksquashfs edit extract-cd/live/filesystem.squashfs -no-progress
+
+# -- ISOイメージの作成 --------------------------------------------------------
+  cd extract-cd
+  rm -f md5sum.txt
+  find -type f -print0 | xargs -0 md5sum | grep -v isolinux/boot.cat | tee md5sum.txt
+  genisoimage -D -r -V "Debian jessie 20160124-16:01" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ../debian-live-8.3.0-amd64-lxde-desktop-custom.iso .
+  ls -l ~/debian/
+  cp -p ~/debian/debian-live-8.3.0-amd64-lxde-desktop-custom.iso "/mnt/hgfs/Share/My Documents/Download/Linux/iso/Debian 8/"
+  cd ~
+
+# == EOF ======================================================================
