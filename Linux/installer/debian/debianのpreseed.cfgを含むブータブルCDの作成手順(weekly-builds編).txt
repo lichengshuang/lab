@@ -11,7 +11,7 @@
   mkdir -p ~/weekly/mnt
 # -----------------------------------------------------------------------------
   cd ~/weekly
-# wget -O preseed.cfg "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lstandard"
+# wget -O preseed.cfg "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.standard"
   wget -O preseed.cfg "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lxde"
   wget                "http://cdimage.debian.org/cdimage/weekly-builds/multi-arch/iso-cd/debian-testing-amd64-i386-netinst.iso"
   mount -o loop debian-testing-amd64-i386-netinst.iso ~/weekly/mnt

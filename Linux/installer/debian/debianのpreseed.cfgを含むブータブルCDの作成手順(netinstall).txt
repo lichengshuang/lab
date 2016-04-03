@@ -11,7 +11,7 @@
   mkdir -p ~/current/mnt
 # -----------------------------------------------------------------------------
   cd ~/current
-# wget -O preseed.cfg "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lstandard"
+# wget -O preseed.cfg "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.standard"
   wget -O preseed.cfg "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lxde"
   wget                "http://cdimage.debian.org/cdimage/release/current/multi-arch/iso-cd/debian-8.3.0-amd64-i386-netinst.iso"
   mount -o loop debian-8.3.0-amd64-i386-netinst.iso ~/current/mnt

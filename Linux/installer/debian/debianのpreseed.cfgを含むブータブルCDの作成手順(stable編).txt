@@ -10,9 +10,10 @@
   mkdir -p ~/stable/mnt
 # -----------------------------------------------------------------------------
   cd ~/stable
-# wget -O preseed.cfg              "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lstandard"
+# wget -O preseed.cfg              "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.standard"
   wget -O preseed.cfg              "https://raw.githubusercontent.com/office-itou/lab/master/Linux/installer/preseed.cfg.lxde"
-  wget -O mini-stable-amd64.iso    "http://ftp.jp.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/mini.iso"
+# wget -O mini-stable-amd64.iso    "http://ftp.jp.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/mini.iso"
+  wget -O mini-stable-amd64.iso    "http://cdimage.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/mini.iso"
   mount -o loop mini-stable-amd64.iso ~/stable/mnt
   pushd ~/stable/mnt
     find . -depth -print | cpio -pdm ~/stable/image/

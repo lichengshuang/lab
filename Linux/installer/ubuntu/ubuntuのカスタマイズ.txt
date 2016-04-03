@@ -51,8 +51,10 @@
                        firefox-locale-ja thunderbird-locale-ja \
                        fonts-takao-mincho fonts-takao-pgothic \
                        language-pack-gnome-ja language-pack-gnome-ja-base language-pack-ja language-pack-ja-base
-    freshclam -d
-    freshclam
+    sed -i /etc/clamav/freshclam.conf \
+        -e 's/# Check for new database 24 times a day/# Check for new database 4 times a day/' \
+        -e 's/Checks 24/Checks 4/' \
+        -e 's/^NotifyClamd/#&/'
     sed -i /etc/ssh/sshd_config \
         -e 's/^PermitRootLogin without-password/#&\nPermitRootLogin yes/' \
         -e 's/#PasswordAuthentication yes/PasswordAuthentication yes/' \

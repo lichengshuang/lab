@@ -365,12 +365,12 @@ _EOT_
 #		funcPause $?
 #		update-locale LANG=ja_JP.UTF-8
 #		funcPause $?
-		timedatectl set-timezone "Asia/Tokyo"
-		funcPause $?
-		localectl set-locale LANG="ja_JP.utf8" LANGUAGE="ja:en"
-		funcPause $?
-		localectl set-x11-keymap "jp" "jp106" "" "terminate:ctrl_alt_bksp"
-		funcPause $?
+#		timedatectl set-timezone "Asia/Tokyo"
+#		funcPause $?
+#		localectl set-locale LANG="ja_JP.utf8" LANGUAGE="ja:en"
+#		funcPause $?
+#		localectl set-x11-keymap "jp" "jp106" "" "terminate:ctrl_alt_bksp"
+#		funcPause $?
 		locale | sed -e 's/LANG=C/LANG=ja_JP.UTF-8/' \
 					 -e 's/LANGUAGE=$/LANGUAGE=ja:en/' \
 					 -e 's/"C"/"ja_JP.UTF-8"/' > /etc/locale.conf
@@ -842,10 +842,10 @@ _EOT_
 		fi
 	fi
 
-	/etc/init.d/clamav-freshclam stop
-	freshclam -d
-	freshclam
-	/etc/init.d/clamav-freshclam start
+#	/etc/init.d/clamav-freshclam stop
+#	freshclam -d
+#	freshclam
+#	/etc/init.d/clamav-freshclam start
 
 #	service clamav-freshclam stop
 #	/etc/init.d/clamav-freshclam stop
