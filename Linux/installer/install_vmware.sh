@@ -56,6 +56,7 @@
 ##	2016/02/25 000.0000 J.Itou         処理見直し(sed見直し)
 ##	2016/03/03 000.0000 J.Itou         処理見直し(色々と見直し)
 ##	2016/03/14 000.0000 J.Itou         処理見直し(色々と見直し)
+##	2016/04/26 000.0000 J.Itou         cifs-utils追加
 ##	YYYY/MM/DD 000.0000 xxxxxxxxxxxxxx 
 ###############################################################################
 #set -nvx
@@ -297,7 +298,7 @@ _EOT_
 						ssh \
 						apache2 \
 						proftpd \
-						samba smbclient \
+						samba smbclient cifs-utils \
 						rsync \
 						fdclone \
 						gufw \

@@ -14,8 +14,8 @@ Rem Set CPU_TYP=x86
     Set WPE_SRC=%USERPROFILE%\Desktop\AcronisBootablePEMedia.wim
     Set WPE_DST=%WPE_DIR%\%CPU_TYP%
     Set DVD_DST=%WPE_DIR%\WinPE_ATI2016.iso
-    Set USB_DST=F:
-    Set XFR_DIR=R:\My Documents\Backup\ATI
+    Set USB_DST=E:
+    Set XFR_DIR=\\vmware-host\Shared Folders\Share\My Documents\Backup\ati
 
     Echo *******************************************************************************
     Echo *** Windows PE”ÅATI2016[%CPU_TYP%] (VMware Workstation 12‘Î‰ž)                  ***
@@ -133,7 +133,7 @@ Rem Dism /Image:"%WPE_DST%\mount" /Add-Driver /ForceUnsigned /Driver:"%WPE_DIR%\
     Dism /Image:"%WPE_DST%\mount" /Add-Driver /ForceUnsigned /Driver:"%WPE_DIR%\_drivers\VMware.x64\vmxnet3\NDIS6\vmxnet3ndis6.inf"
 Rem Dism /Image:"%WPE_DST%\mount" /Add-Driver /ForceUnsigned /Driver:"%WPE_DIR%\_drivers\VMware Accelerated AMD PCNet Adapter\oem5.inf"
 Rem --- LSI Logic SCSI --------------------------------------------------------
-    Dism /Image:"%WPE_DST%\mount" /Add-Driver /ForceUnsigned /Driver:"%WPE_DIR%\_drivers\LSI\lsimpt_scsi_srv08_x64\lsi_scsi.inf"
+    Dism /Image:"%WPE_DST%\mount" /Add-Driver /ForceUnsigned /Driver:"%WPE_DIR%\_drivers\LSI\LSIMPT_SCSI_WinVista_1-28-03\lsimpt_scsi_vista_x64_rel\lsi_scsi.inf"
 Rem --- Intel NIC -------------------------------------------------------------
 Rem Dism /Image:"%WPE_DST%\mount" /Add-Driver /ForceUnsigned /Driver:"%WPE_DIR%\_drivers\INTEL\PROWinx64\PRO1000\Winx64\NDIS65\e1c65x64.inf"
 Rem Dism /Image:"%WPE_DST%\mount" /Add-Driver /ForceUnsigned /Driver:"%WPE_DIR%\_drivers\INTEL\PROWinx64\PRO1000\Winx64\NDIS65\e1d65x64.inf"
